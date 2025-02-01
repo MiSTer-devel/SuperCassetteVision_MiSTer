@@ -71,7 +71,7 @@ initial #0 begin
 
   #1000 @(posedge clk) ;
 
-  tx(8'h0f);
+  tx(8'h09);
 
   #(100e3) @(posedge clk) ;
 

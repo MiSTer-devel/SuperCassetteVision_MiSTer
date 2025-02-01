@@ -268,7 +268,9 @@ assign pci[7:1] = 0;            // unused
 // Hack: Latch APU writes
 initial apu_db = '0;
 always @(posedge CLK) if (cp2n) begin
-  if (~vdc_scpub & ~cpu_wrb)
+  if (~RESB)
+    apu_db <= 0;
+  else if (~vdc_scpub & ~cpu_wrb)
     apu_db <= cpu_db;
 end
 
