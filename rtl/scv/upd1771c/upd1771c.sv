@@ -165,6 +165,7 @@ wire id_op_reti_ns = ~|id[15:12] & id[11] & id[8] & id[1]; // 0000_1xx1__xx1x
 wire id_op_reti_tone = ~|id[15:12] & id[11] & id[8] & id[0]; // 0000_1xx1__xxx1
 wire id_op_mov_N_a = ~|id[15:10] & id[9] & id[0]; // 0000_001x__xxx1
 wire id_op_out_da = ~|id[15:11] & id[10] & id[8] & id[1]; // 0000_01x1__xx1x
+wire id_aluop_md_n = id[15] & ~|id[14:13] & id[8]; // 100x_xxx1__xxxx
 wire id_op_mvi_md1_n = ~|id[15:14] & &id[13:12] & id[8]; // 0011_xxx1__xxxx
 wire id_aluop_notest_md1_n = id[15] & ~|id[14:12] & id[8]; // 1000_xxx1__xxxx
 wire id_op_mvi_md0_n = ~|id[15:14] & id[13] & ~id[12] & id[8]; // 0010_xxx1__xxxx
@@ -292,6 +293,7 @@ wire cl_ts_reg_en = t45 & cl_id_op_tbln_X_Rr_dd;
 wire cl_alu_c4inh = (id_op_adims & ~md_64_32) | id_op_adi5;
 wire cl_alu_c5inh = id_op_adims & md_64_32;
 wire cl_op_tadi5_or_adims_and_not_md0 = (id_op_adims & ~md_64_32) | id_op_tadi5;
+wire cl_md_to_db = t23 & id_aluop_md_n;
 
 assign cl_pdb_ram_a[4:0] = cl_pdb12_8_to_ram_a ? pdb[12:8] : pdb[8:4];
 assign cl_sp_ram_a = cl_spm1_to_ram_a ? (sp - 1'd1) : sp;
@@ -1011,7 +1013,7 @@ always @* begin
   if (cl_pdb15_8_to_db7_0)  db[7:0] = pdb[15:8];
   if (cl_pdb7_0_to_db7_0)   db[7:0] = pdb[7:0];
   if (pc_out_to_db)         db[7:0] = pc[7:0];
-  //if (n699)                 db[7:0] = md[7:0];
+  if (cl_md_to_db)          db[7:0] = md[7:0];
   if (cl_a_to_db)           db[7:0] = a;
   if (cl_h_to_db)           db[7:0] = {2'b0, h};
   if (cl_x_to_db)           db[7:0] = {1'b0, x};
