@@ -134,7 +134,7 @@ endtask
 
 task rominit_apu;
   rominit_sel_apu = '1;
-  rominit_go("upd1771c-017.s03");
+  rominit_go("upd1771c-011.sxx");
   rominit_sel_apu = '0;
 endtask
 
@@ -164,9 +164,9 @@ always @(negedge vs) begin
   $sformat(fname, "frames/render-%03d", frame);
   pice = 0;
 `ifdef VERILATOR
-  if (frame == 290)
+  if (frame == 15)
     $dumpvars();
-  if (frame == 320)
+  if (frame == 50)
     $finish();
 `endif
   if ((frame % 10) == 0) begin
@@ -225,20 +225,10 @@ initial if (1) begin
   hmi.num[1] = '1;
   #(30e3) hmi.num[1] = 0;
 
-  #(200e3);
-  $display("Pressing 1...");
-  hmi.num[1] = '1;
-  #(30e3) hmi.num[1] = 0;
-
-  #(200e3);
-  $display("Pressing T1...");
-  hmi.c1.t1 = '1;
-  #(30e3) hmi.c1.t1 = 0;
-
-  repeat (4) #(1000e3);
-  $display("Pressing T1...");
-  hmi.c1.t1 = '1;
-  #(30e3) hmi.c1.t1 = 0;
+  #(300e3);
+  $display("Pressing CL...");
+  hmi.cl = '1;
+  #(30e3) hmi.cl = 0;
 end
 
 endmodule

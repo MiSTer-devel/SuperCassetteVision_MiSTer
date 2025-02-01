@@ -68,6 +68,7 @@ wire [23:0] rgb;
 wire        apu_ncs;
 wire        apu_ack;
 wire [7:0]  apu_pb_o;
+reg [7:0]   apu_db;
 
 wire [7:0]  pao, pbi, pci, pco;
 
@@ -208,10 +209,10 @@ upd1771c apu
    .INIT_VALID(ROMINIT_VALID),
    .CH1('1),
    .CH2('0),
-   .PA_I(cpu_db),
+   .PA_I(apu_db),
    .PA_O(),
    .PA_OE(),
-   .PB_I({vdc_scpub, cpu_wrb, ~6'b0}),
+   .PB_I(~8'b0),
    .PB_O(apu_pb_o),
    .PB_OE(),
    .PCM_OUT(AUD_PCM)
@@ -263,6 +264,13 @@ always_comb begin
 end
 
 assign pci[7:1] = 0;            // unused
+
+// Hack: Latch APU writes
+initial apu_db = '0;
+always @(posedge CLK) if (cp2n) begin
+  if (~vdc_scpub & ~cpu_wrb)
+    apu_db <= cpu_db;
+end
 
 assign VID_PCE = vdc_ce;
 assign VID_DE = de;
