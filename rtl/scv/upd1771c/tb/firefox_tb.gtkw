@@ -1,0 +1,437 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Sat Nov 16 23:07:58 2024
+[*]
+[dumpfile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/upd1771c/tb/firefox_tb.vcd"
+[dumpfile_mtime] "Sat Nov 16 23:07:52 2024"
+[dumpfile_size] 14940758
+[savefile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/upd1771c/tb/firefox_tb.gtkw"
+[timestart] 9725000000
+[size] 1416 762
+[pos] -1 -1
+*-30.084705 21166582 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[markername] AA
+[markername] BB
+[markername] CC
+[markername] DD
+[markername] EE
+[markername] FF
+[markername] GG
+[markername] HH
+[markername] II
+[markername] JJ
+[markername] KK
+[markername] LL
+[markername] MM
+[markername] NN
+[markername] OO
+[markername] PP
+[markername] QQ
+[markername] RR
+[markername] SS
+[markername] TT
+[markername] UU
+[markername] VV
+[markername] WW
+[markername] XX
+[markername] YY
+[markername] ZZ
+[treeopen] firefox_tb.
+[sst_width] 253
+[signals_width] 292
+[sst_expanded] 1
+[sst_vpaned_height] 215
+@28
+firefox_tb.ncs
+firefox_tb.nwr
+firefox_tb.dsb
+@22
+firefox_tb.din[7:0]
+@28
+firefox_tb.dut.CLK
+firefox_tb.dut.RESB
+@800200
+-common
+@28
+firefox_tb.dut.phi2
+@22
+firefox_tb.dut.ab[11:0]
+firefox_tb.dut.pdb[15:0]
+firefox_tb.dut.db[15:0]
+firefox_tb.dut.pc[11:0]
+firefox_tb.dut.sp[2:0]
+firefox_tb.dut.a[7:0]
+firefox_tb.dut.h[5:0]
+firefox_tb.dut.x[6:0]
+firefox_tb.dut.y[4:0]
+@10421
+firefox_tb.dut.PCM_OUT[8:0]
+@20000
+-
+-
+-
+@1000200
+-common
+@c00200
+-io
+@22
+firefox_tb.dut.PA_I[7:0]
+firefox_tb.dut.PA_O[7:0]
+firefox_tb.dut.PA_OE[7:0]
+firefox_tb.dut.PB_I[7:0]
+firefox_tb.dut.PB_OE[7:0]
+firefox_tb.dut.PB_O[7:0]
+firefox_tb.dut.pbi_reg[7:0]
+@28
+firefox_tb.dut.io_ext_cs
+firefox_tb.dut.io_ext_read
+firefox_tb.dut.io_ext_read_latch
+firefox_tb.dut.io_ext_write
+firefox_tb.dut.io_ext_write_latch
+firefox_tb.dut.io_pabx_pad_pdb_pax_db_out_en
+firefox_tb.dut.io_pax_db_out_reg_en
+firefox_tb.dut.io_pax_noe
+firefox_tb.dut.io_pax_out_pbx_pdb_pad_en
+firefox_tb.dut.io_pax_out_reg_db_en
+firefox_tb.dut.io_pax_out_reg_latch_en
+firefox_tb.dut.io_pax_pdb_out_en
+firefox_tb.dut.io_pbx2_0_noe
+firefox_tb.dut.io_pbx7_3_noe
+firefox_tb.dut.io_pbx_noe
+firefox_tb.dut.io_pbx_out_reg_ce
+firefox_tb.dut.io_pbx_pad_db_en
+@22
+firefox_tb.dut.pai[7:0]
+firefox_tb.dut.pao[7:0]
+firefox_tb.dut.pao_reg[7:0]
+firefox_tb.dut.pbi[7:0]
+firefox_tb.dut.pbi_reg[7:0]
+firefox_tb.dut.pbo[7:0]
+firefox_tb.dut.pbo_reg_p[7:0]
+firefox_tb.dut.pbo_reg[7:0]
+@1401200
+-io
+@c00200
+-bus
+@22
+firefox_tb.dut.db[15:0]
+firefox_tb.dut.pdb[15:0]
+@1401200
+-bus
+@c00200
+-res
+@28
+firefox_tb.dut.resp
+firefox_tb.dut.ch1d
+firefox_tb.dut.ch2d
+firefox_tb.dut.leader
+firefox_tb.dut.follower
+firefox_tb.dut.testmode
+@1401200
+-res
+@c00200
+-clkgen
+@28
+firefox_tb.dut.phi2p
+firefox_tb.dut.phi2n
+firefox_tb.dut.phi2
+firefox_tb.dut.phi1p
+firefox_tb.dut.phi1n
+firefox_tb.dut.phi1
+firefox_tb.dut.philsi
+firefox_tb.dut.phi56
+firefox_tb.dut.t23
+firefox_tb.dut.t45
+firefox_tb.dut.t68
+@1401200
+-clkgen
+@c00200
+-id
+@22
+firefox_tb.dut.id[15:0]
+@28
+firefox_tb.dut.id_aluop_1x0
+firefox_tb.dut.id_aluop_1x1
+firefox_tb.dut.id_aluop_10x
+firefox_tb.dut.id_aluop_10x_1x0
+firefox_tb.dut.id_aluop_10x_1x0_sk_cb
+firefox_tb.dut.id_aluop_10x_1x0_sk_z
+firefox_tb.dut.id_aluop_10x_1x0_txnx
+firefox_tb.dut.id_aluop_11x
+firefox_tb.dut.id_aluop_100
+firefox_tb.dut.id_aluop_A_Rr
+firefox_tb.dut.id_aluop_A_Rr_Hp
+firefox_tb.dut.id_aluop_A_n
+firefox_tb.dut.id_aluop_H_n
+firefox_tb.dut.id_aluop_Hp_n
+firefox_tb.dut.id_aluop_Rr_A_Hp_A
+firefox_tb.dut.id_aluop_Rr_n
+firefox_tb.dut.id_aluop_Rr_n_not_c5
+firefox_tb.dut.id_aluop_Rr_pdb8_4
+firefox_tb.dut.id_aluop_and
+firefox_tb.dut.id_aluop_notest_H_n
+firefox_tb.dut.id_aluop_notest_Hp_n
+firefox_tb.dut.id_aluop_notest_Rr_n
+firefox_tb.dut.id_aluop_notest_md1_n
+firefox_tb.dut.id_aluop_or
+firefox_tb.dut.id_aluop_or_xor_equ
+firefox_tb.dut.id_aluop_sb
+firefox_tb.dut.id_aluop_test_Rr_n
+firefox_tb.dut.id_aluop_txnx_Rr_n
+firefox_tb.dut.id_get_a_t23_a
+firefox_tb.dut.id_get_a_t23_b
+firefox_tb.dut.id_get_a_t23_c
+firefox_tb.dut.id_get_a_t45
+firefox_tb.dut.id_get_h_t23
+firefox_tb.dut.id_op_Rr_pdb8_4
+firefox_tb.dut.id_op_adi5
+firefox_tb.dut.id_op_adi_andi_sbi_ori
+firefox_tb.dut.id_op_adi_sbi_adi5_Rr_n
+firefox_tb.dut.id_op_adims
+firefox_tb.dut.id_op_call
+firefox_tb.dut.id_op_calln
+firefox_tb.dut.id_op_in_pa
+firefox_tb.dut.id_op_in_pb
+firefox_tb.dut.id_op_jmp_call
+firefox_tb.dut.id_op_jmp_call_n_t2
+firefox_tb.dut.id_op_jmp_n4
+firefox_tb.dut.id_op_jmpa
+firefox_tb.dut.id_op_jmpfz
+firefox_tb.dut.id_op_mix
+firefox_tb.dut.id_op_mov_N_a
+firefox_tb.dut.id_op_mov_X_RG
+firefox_tb.dut.id_op_mov_xchg_Hp_Rr_dst
+firefox_tb.dut.id_op_mov_xchg_Hp_Rr_x
+firefox_tb.dut.id_op_mov_xchg_a_dst
+firefox_tb.dut.id_op_mov_xchg_mix_Rr_Hp
+firefox_tb.dut.id_op_mul1
+firefox_tb.dut.id_op_mul2
+firefox_tb.dut.id_op_mul2_b
+firefox_tb.dut.id_op_muln
+firefox_tb.dut.id_op_mvi_H_n
+firefox_tb.dut.id_op_mvi_Rr_n
+firefox_tb.dut.id_op_mvi_md0_n
+firefox_tb.dut.id_op_mvi_md1_n
+firefox_tb.dut.id_op_not_aluop
+firefox_tb.dut.id_op_not_aluop_or_rets
+firefox_tb.dut.id_op_out_da
+firefox_tb.dut.id_op_out_pa
+firefox_tb.dut.id_op_out_pb
+firefox_tb.dut.id_op_ral
+firefox_tb.dut.id_op_rar
+firefox_tb.dut.id_op_reti
+firefox_tb.dut.id_op_reti_ext
+firefox_tb.dut.id_op_reti_ns
+firefox_tb.dut.id_op_reti_time
+firefox_tb.dut.id_op_reti_tone
+firefox_tb.dut.id_op_rets
+firefox_tb.dut.id_op_retx
+firefox_tb.dut.id_op_set_H
+firefox_tb.dut.id_op_src_n_a
+firefox_tb.dut.id_op_src_n_b
+firefox_tb.dut.id_op_stf
+firefox_tb.dut.id_op_tadi5
+firefox_tb.dut.id_op_tbln_X_Rr
+firefox_tb.dut.id_op_tbln_Y_Rr
+firefox_tb.dut.id_op_tbln_a_Rr
+firefox_tb.dut.id_op_tbln_calln
+firefox_tb.dut.id_op_xori
+firefox_tb.dut.id_set_a
+@1401200
+-id
+@c00200
+-cl
+@28
+firefox_tb.dut.cl_a_in_lsr
+firefox_tb.dut.cl_a_in_ror_lsr
+firefox_tb.dut.cl_a_reg_en
+firefox_tb.dut.cl_a_to_db
+firefox_tb.dut.cl_alu_c4inh
+firefox_tb.dut.cl_alu_c5inh
+firefox_tb.dut.cl_alu_c_to_db
+firefox_tb.dut.cl_h_reg_en
+firefox_tb.dut.cl_h_to_db
+firefox_tb.dut.cl_id_Rr_Hp_t45
+firefox_tb.dut.cl_id_op_Hp_Rr_dst
+firefox_tb.dut.cl_id_op_calln_d
+firefox_tb.dut.cl_id_op_calln_dd
+firefox_tb.dut.cl_id_op_calln_retx
+firefox_tb.dut.cl_id_op_out_pa_d
+firefox_tb.dut.cl_id_op_tbln_X_Rr_dd
+firefox_tb.dut.cl_id_op_tbln_Y_Rr_dd
+firefox_tb.dut.cl_id_op_tbln_a_Rr_dd
+firefox_tb.dut.cl_int_load_pc
+firefox_tb.dut.cl_md0_reg_en
+firefox_tb.dut.cl_md1_reg_en
+firefox_tb.dut.cl_n_reg_en
+firefox_tb.dut.cl_op_clear_skip
+firefox_tb.dut.cl_op_tadi5_or_adims_and_not_md0
+firefox_tb.dut.cl_pc_load_db11_0
+firefox_tb.dut.cl_pdb7_0_to_db7_0
+firefox_tb.dut.cl_pdb7_4_to_db15_12
+firefox_tb.dut.cl_pdb8_4_to_ram_a
+firefox_tb.dut.cl_pdb11_8_to_db11_8
+firefox_tb.dut.cl_pdb12_8_to_ram_a
+firefox_tb.dut.cl_pdb15_8_to_db7_0
+firefox_tb.dut.cl_pdb_hi_sel
+@22
+firefox_tb.dut.cl_pdb_ram_a[4:0]
+@28
+firefox_tb.dut.cl_skip
+firefox_tb.dut.cl_skip_a
+firefox_tb.dut.cl_skip_p
+firefox_tb.dut.cl_skip_pp
+firefox_tb.dut.cl_skip_test_failed
+firefox_tb.dut.cl_skip_test_if_set
+firefox_tb.dut.cl_skip_test_out
+firefox_tb.dut.cl_sp_ram_a[2:0]
+firefox_tb.dut.cl_sp_to_ram_a
+firefox_tb.dut.cl_spm1_to_ram_a
+firefox_tb.dut.cl_t1
+firefox_tb.dut.cl_tbln_PRr_odd
+firefox_tb.dut.cl_tbln_PRr_odd_p
+firefox_tb.dut.cl_tbln_PRr_odd_pp
+firefox_tb.dut.cl_ts_reg_en
+firefox_tb.dut.cl_x_reg_en
+firefox_tb.dut.cl_x_to_db
+firefox_tb.dut.cl_y_reg_en
+firefox_tb.dut.cl_y_shift
+@1401200
+-cl
+@c00200
+-alu
+@28
+firefox_tb.dut.philsi
+@22
+firefox_tb.dut.alu_a[7:0]
+firefox_tb.dut.alu_b[7:0]
+firefox_tb.dut.alu_c[7:0]
+@28
+firefox_tb.dut.alu_co
+firefox_tb.dut.alu_c_zero
+firefox_tb.dut.alu_db_to_temp1
+firefox_tb.dut.alu_db_to_temp2
+firefox_tb.dut.alu_op_and
+firefox_tb.dut.alu_op_no_carry
+firefox_tb.dut.alu_op_or
+firefox_tb.dut.alu_op_sub
+firefox_tb.dut.alu_temp1_first
+firefox_tb.dut.alu_zero_a_hi
+firefox_tb.dut.alu_zero_a_lo
+firefox_tb.dut.alu_zero_b
+firefox_tb.dut.cl_alu_c_to_db
+@1401200
+-alu
+@c00200
+-pc
+@22
+firefox_tb.dut.pc[11:0]
+firefox_tb.dut.ab[11:0]
+firefox_tb.dut.pcn[11:0]
+firefox_tb.dut.abn[11:0]
+firefox_tb.dut.pcin[11:0]
+firefox_tb.dut.abadd[11:0]
+@28
+firefox_tb.dut.pc_load_db11_0
+firefox_tb.dut.pc_load_db12_1
+firefox_tb.dut.pc_abadd_cin
+firefox_tb.dut.pc_load_int_vec
+firefox_tb.dut.pc_load_db11_0
+firefox_tb.dut.pc_load_db12_1
+firefox_tb.dut.pc_out_to_db
+firefox_tb.dut.pc_pcin_to_abn
+firefox_tb.dut.pc_ctrl1
+firefox_tb.dut.pc_ctrl3
+firefox_tb.dut.pc_ctrl4
+@1401200
+-pc
+@c00200
+-rom
+@28
+firefox_tb.dut.rom_oe
+firefox_tb.dut.rom_zero
+@22
+firefox_tb.dut.rom_do[15:0]
+@1401200
+-rom
+@c00200
+-reg
+@22
+firefox_tb.dut.md[9:0]
+firefox_tb.dut.a[7:0]
+firefox_tb.dut.sa[7:0]
+firefox_tb.dut.h[5:0]
+@28
+firefox_tb.dut.sp[2:0]
+@22
+firefox_tb.dut.x[6:0]
+firefox_tb.dut.y[4:0]
+@28
+firefox_tb.dut.fl0
+firefox_tb.dut.ts
+firefox_tb.dut.ns
+firefox_tb.dut.ss
+@1401200
+-reg
+@c00200
+-ram
+@22
+firefox_tb.dut.ram_row[3:0]
+@28
+firefox_tb.dut.ram_col[1:0]
+firefox_tb.dut.ram_left_sel
+firefox_tb.dut.ram_right_sel
+firefox_tb.dut.ram_left_db_oe
+firefox_tb.dut.id_op_tbln_a_Rr
+@22
+firefox_tb.dut.ram_left_rbuf[7:0]
+firefox_tb.dut.ram_left_wbuf[7:0]
+@28
+firefox_tb.dut.ram_left_write_en
+firefox_tb.dut.ram_right_db7_0_ie
+firefox_tb.dut.ram_right_db7_0_oe
+@22
+firefox_tb.dut.ram_right_rbuf[7:0]
+@28
+firefox_tb.dut.ram_right_db15_8_oe
+@22
+firefox_tb.dut.ram_right_wbuf[7:0]
+@28
+firefox_tb.dut.ram_right_write_en
+@1401200
+-ram
+@c00200
+-tone
+@22
+firefox_tb.dut.n[7:0]
+firefox_tb.dut.nc[7:0]
+firefox_tb.dut.nuc[2:0]
+@28
+firefox_tb.dut.int_tone_cond
+@1401200
+-tone
+@c00200
+-int
+@22
+firefox_tb.dut.int_set_pend[3:0]
+firefox_tb.dut.int_pending[3:0]
+firefox_tb.dut.int_set_active[3:0]
+firefox_tb.dut.int_set_active_prio[3:0]
+firefox_tb.dut.int_clr_active[3:0]
+firefox_tb.dut.int_active[3:0]
+firefox_tb.dut.int_load_pc[3:0]
+@1401200
+-int
+@c00200
+-dac
+@22
+firefox_tb.dut.da[9:0]
+@28
+firefox_tb.dut.pcm_neg
+@22
+firefox_tb.dut.pcm_out[7:0]
+firefox_tb.dut.PCM_OUT[8:0]
+@1401200
+-dac
+[pattern_trace] 1
+[pattern_trace] 0
