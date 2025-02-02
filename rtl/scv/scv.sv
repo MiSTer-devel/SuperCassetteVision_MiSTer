@@ -298,7 +298,7 @@ module clkgen
    // VDC clock: CLK / 7 = 4.090909 MHz
    output VDC_CE,
 
-   // Audio clock: CLK * 22 / 105 = 6.000000 MHz
+   // Audio clock: CLK * 11 / 63 = 5.000000 MHz
    output AUD_CE
    );
 
@@ -310,8 +310,8 @@ wire      cpu4_ce;
 
 localparam [8:0] CPU4_MUL = 9'd88;
 localparam [8:0] CPU4_DIV = 9'd315;
-localparam [6:0] AUD_MUL = 7'd22;
-localparam [6:0] AUD_DIV = 7'd105;
+localparam [6:0] AUD_MUL = 7'd11;
+localparam [6:0] AUD_DIV = 7'd63;
 
 initial begin
   c4cnt = 0;
