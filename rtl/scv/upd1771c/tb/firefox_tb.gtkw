@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Sat Nov 16 23:07:58 2024
+[*] Sun Feb  2 00:37:20 2025
 [*]
 [dumpfile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/upd1771c/tb/firefox_tb.vcd"
-[dumpfile_mtime] "Sat Nov 16 23:07:52 2024"
-[dumpfile_size] 14940758
+[dumpfile_mtime] "Sun Feb  2 00:35:42 2025"
+[dumpfile_size] 233174934
 [savefile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/upd1771c/tb/firefox_tb.gtkw"
-[timestart] 9725000000
-[size] 1416 762
+[timestart] 0
+[size] 1288 600
 [pos] -1 -1
-*-30.084705 21166582 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-36.277054 41632666802 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -41,10 +41,6 @@
 [signals_width] 292
 [sst_expanded] 1
 [sst_vpaned_height] 215
-@28
-firefox_tb.ncs
-firefox_tb.nwr
-firefox_tb.dsb
 @22
 firefox_tb.din[7:0]
 @28
@@ -169,6 +165,7 @@ firefox_tb.dut.id_aluop_Rr_n
 firefox_tb.dut.id_aluop_Rr_n_not_c5
 firefox_tb.dut.id_aluop_Rr_pdb8_4
 firefox_tb.dut.id_aluop_and
+firefox_tb.dut.id_aluop_md_n
 firefox_tb.dut.id_aluop_notest_H_n
 firefox_tb.dut.id_aluop_notest_Hp_n
 firefox_tb.dut.id_aluop_notest_Rr_n
@@ -200,6 +197,7 @@ firefox_tb.dut.id_op_jmpfz
 firefox_tb.dut.id_op_mix
 firefox_tb.dut.id_op_mov_N_a
 firefox_tb.dut.id_op_mov_X_RG
+firefox_tb.dut.id_op_mov_Y_Rr
 firefox_tb.dut.id_op_mov_xchg_Hp_Rr_dst
 firefox_tb.dut.id_op_mov_xchg_Hp_Rr_x
 firefox_tb.dut.id_op_mov_xchg_a_dst
@@ -214,6 +212,7 @@ firefox_tb.dut.id_op_mvi_md0_n
 firefox_tb.dut.id_op_mvi_md1_n
 firefox_tb.dut.id_op_not_aluop
 firefox_tb.dut.id_op_not_aluop_or_rets
+firefox_tb.dut.id_op_off
 firefox_tb.dut.id_op_out_da
 firefox_tb.dut.id_op_out_pa
 firefox_tb.dut.id_op_out_pb
@@ -257,18 +256,23 @@ firefox_tb.dut.cl_id_op_calln_d
 firefox_tb.dut.cl_id_op_calln_dd
 firefox_tb.dut.cl_id_op_calln_retx
 firefox_tb.dut.cl_id_op_out_pa_d
+firefox_tb.dut.cl_id_op_tbln_X_Rr_d
 firefox_tb.dut.cl_id_op_tbln_X_Rr_dd
+firefox_tb.dut.cl_id_op_tbln_Y_Rr_d
 firefox_tb.dut.cl_id_op_tbln_Y_Rr_dd
+firefox_tb.dut.cl_id_op_tbln_a_Rr_d
 firefox_tb.dut.cl_id_op_tbln_a_Rr_dd
 firefox_tb.dut.cl_int_load_pc
 firefox_tb.dut.cl_md0_reg_en
 firefox_tb.dut.cl_md1_reg_en
+firefox_tb.dut.cl_md_to_db
+firefox_tb.dut.cl_mix_sub
 firefox_tb.dut.cl_n_reg_en
 firefox_tb.dut.cl_op_clear_skip
 firefox_tb.dut.cl_op_tadi5_or_adims_and_not_md0
 firefox_tb.dut.cl_pc_load_db11_0
 firefox_tb.dut.cl_pdb7_0_to_db7_0
-firefox_tb.dut.cl_pdb7_4_to_db15_12
+firefox_tb.dut.cl_pdb7_4_to_db11_8
 firefox_tb.dut.cl_pdb8_4_to_ram_a
 firefox_tb.dut.cl_pdb11_8_to_db11_8
 firefox_tb.dut.cl_pdb12_8_to_ram_a
@@ -277,10 +281,12 @@ firefox_tb.dut.cl_pdb_hi_sel
 @22
 firefox_tb.dut.cl_pdb_ram_a[4:0]
 @28
+firefox_tb.dut.cl_pnc1_to_db
 firefox_tb.dut.cl_skip
 firefox_tb.dut.cl_skip_a
 firefox_tb.dut.cl_skip_p
 firefox_tb.dut.cl_skip_pp
+firefox_tb.dut.cl_skip_s
 firefox_tb.dut.cl_skip_test_failed
 firefox_tb.dut.cl_skip_test_if_set
 firefox_tb.dut.cl_skip_test_out
@@ -400,6 +406,27 @@ firefox_tb.dut.ram_right_wbuf[7:0]
 firefox_tb.dut.ram_right_write_en
 @1401200
 -ram
+@c00200
+-rxx
+@22
+firefox_tb.r00[7:0]
+firefox_tb.r01[7:0]
+firefox_tb.r02[7:0]
+firefox_tb.r03[7:0]
+firefox_tb.r04[7:0]
+firefox_tb.r05[7:0]
+firefox_tb.r06[7:0]
+firefox_tb.r07[7:0]
+firefox_tb.r08[7:0]
+firefox_tb.r09[7:0]
+firefox_tb.r0a[7:0]
+firefox_tb.r0b[7:0]
+firefox_tb.r0c[7:0]
+firefox_tb.r0d[7:0]
+firefox_tb.r0e[7:0]
+firefox_tb.r0f[7:0]
+@1401200
+-rxx
 @c00200
 -tone
 @22

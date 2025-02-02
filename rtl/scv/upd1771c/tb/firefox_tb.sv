@@ -73,10 +73,27 @@ initial #0 begin
 
   tx(8'h09);
 
-  #(100e3) @(posedge clk) ;
+  #(300e3) @(posedge clk) ;
 
   $finish;
 end
+
+wire [7:0] r00 = dut.ram_left_mem [0][0];
+wire [7:0] r01 = dut.ram_right_mem[0][0];
+wire [7:0] r02 = dut.ram_left_mem [0][1];
+wire [7:0] r03 = dut.ram_right_mem[0][1];
+wire [7:0] r04 = dut.ram_left_mem [0][2];
+wire [7:0] r05 = dut.ram_right_mem[0][2];
+wire [7:0] r06 = dut.ram_left_mem [0][3];
+wire [7:0] r07 = dut.ram_right_mem[0][3];
+wire [7:0] r08 = dut.ram_left_mem [0][4];
+wire [7:0] r09 = dut.ram_right_mem[0][4];
+wire [7:0] r0a = dut.ram_left_mem [0][5];
+wire [7:0] r0b = dut.ram_right_mem[0][5];
+wire [7:0] r0c = dut.ram_left_mem [0][6];
+wire [7:0] r0d = dut.ram_right_mem[0][6];
+wire [7:0] r0e = dut.ram_left_mem [0][7];
+wire [7:0] r0f = dut.ram_right_mem[0][7];
 
 endmodule
 
