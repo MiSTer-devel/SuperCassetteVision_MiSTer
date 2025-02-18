@@ -61,8 +61,7 @@ External VRAM
 . shared address and data buses
 . \VCS always select one chip
 . contents: sprite patterns
-. 5 MT/s x 16 bits          --- WRONG
-  . given max. 30 sprite per row, 120 bytes are fetched per row
+. Bus cycle time: (2 / 14.318181) us = 2p
 
 
 Internal RAM
@@ -291,8 +290,55 @@ Reset behavior
 Following \RESET de-assertion, there are 247 positive \CSYNC (HSYNC)
 pulses. VBL asserts during the 248th pulse.
 
-VBL is not de-asserted by \RESET. If VBL was going into \RESET, it
-remains asserted, and then de-asserts during the 16th \CSYNC pulse.
+VBL is not de-asserted by \RESET. If VBL was asserted going into
+\RESET, it remains asserted, and then de-asserts during the 16th
+\CSYNC pulse.
 
 The above behaviors suggest that the row counter is cleared on \RESET,
 and that the first rendered row is row=16.
+
+
+Sprite rendering
+----------------
+
+Sprites are evaluated and rendered two rows at a time, over the period
+that it takes to output two rows.  After being rendered, the two rows
+are then output, while simultaneously the sprites for the next two
+rows are rendered.
+
+Sprites are evaluated in order from lowest to highest priority
+(attribute index).  Evaluation determines if the sprite is visible in
+the current 2-row.  A visible sprite is rendered immediately following
+evaluation of that sprite.
+
+Evaluation and rendering algorithm:
+
+for idx in 0 .. 127:
+    # Evaluate
+    sa = spr_attr[idx]
+    if row_in_range(sa) and sa.color != 0:
+        # Render
+        for pos in 0 .. (width / 4 - 1):
+            Read a byte of sprite pattern data from VRAM
+            Draw pattern to render buffer
+
+Each step takes a fixed number of VRAM bus cycles:
+  Evaluation - 1 cycle
+  Render - 1 + (width in pixels / 4) cycles
+
+Sprite width includes modifications by attribute flags that double
+(link) and halve the sprite.  For example, a half-width sprite only
+takes 1 eval. and 3 render cycles.
+
+There are a maximum of 251 VRAM bus cycles (502p) available for sprite
+evaluation / rendering.  Due to this limitation, at most 41 - 24
+visible 16x16 sprites can be rendered per row.  The upper limit
+decreases (fewer rendered) as the visible sprites are moved down
+(higher index) the attribute table.  The last rendered sprite may be
+only partially rendered, dropping 1-3 nibbles (4-12px) from the right.
+
+CPU accesses to VRAM do not affect evalation or rendering timing.  The
+CPU access replaces the intended sprite render access.  The sprite
+pattern data seen by rendering is replaced by 0 (transparent).  Dragon
+Ball shows this effect near the top of the screen, most notably on the
+edges of the scrolling land.
