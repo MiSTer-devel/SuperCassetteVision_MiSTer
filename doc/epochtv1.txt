@@ -245,8 +245,8 @@ VSYNC period: 16.7151ms -- 59.826 Hz
 (Rows and columns are 0-indexed.)
 
 Row 260 starts on VSYNC falling edge. (Actual row counter value is unknown.)
-- VBL is HIGH during rows 251-18.
-- VSYNC is HIGH (\CSYNC is inverted) during rows 260-262.
+- VBL is HIGH during rows 248-15 (total 31).
+- VSYNC is HIGH (\CSYNC is inverted) during rows 257-259.
 
 Rows 260- 15: VBL = 1, VSYNC = 0
 Rows  16-247: VBL = 0, VSYNC = 0
