@@ -61,15 +61,23 @@ External VRAM
 . shared address and data buses
 . \VCS always select one chip
 . contents: sprite patterns
-. Bus cycle time: (2 / 14.318181) us = 2p
+. Bus cycle time: (7 / 14.318181) us = 2p
 
 
-Internal RAM
-------------
+Public internal RAM
+-------------------
 . Directly addressable from CPU ($3000-$33FF)
 . Address map:
   000-1FF (512B) background (Character / graphics bitmap)
-  200-3FF (512B) sprite attributes
+  200-3FF (512B) sprite attributes (main copy)
+
+
+Private internal RAM
+--------------------
+. Not addressable from CPU
+. (512B) Shadow copy of sprite attributes
+. (4 rows x 208[?] cols x 4 bits) sprite render buffer
+  . Dual-port access: 2 rows rendered while other 2 rows output
 
 
 Internal ROM
@@ -85,6 +93,7 @@ R0 ($3400)
 . bit 0: enable bitmap
 . bit 1: bitmap res.: 0=hi-res, 1=lo-res
 . bit 2: hide sprites 64-127
+. bit 3: enable safe CPU writes to sprite attributes RAM (disable shadow copy)
 . bit 4: enable sprites
 . bit 5: 2-color sprite mode
 . bit 6: invert XMAX effect: 1=render char. after XMAX
@@ -101,6 +110,13 @@ R2 ($3402) - Character / graphics window split
 R3 ($3403)
 . bits 7-4: char. FG color
 . bits 3-0: char. BG color
+
+
+Registers are read-only.
+
+All registers are copied into shadow registers, so that changes are
+not observed mid-frame.  The copy occurs at the start of VSYNC (row
+257).
 
 
 CPU memory bus
@@ -201,6 +217,22 @@ Sprite @ (sx, sy) draws at render coord. (sx*2 - 23, sy*2 - 14)
 [TODO: Lots of details, double/half-wide/high, 2-color, etc.]
 
 
+  Shadow copy RAM
+  ---------------
+
+  Sprite attributes are copied from the main copy (CPU-addressable)
+  RAM to the shadow copy RAM, during rows 257-262.  Setting register
+  R0 bit 3 disables the copy, making it safe for the CPU to access
+  attribute RAM.
+
+  During the copy (R0.3 = 0), CPU access to main copy RAM is unreliable:
+  . rows 257.5 - 258.5: writes maybe ignored
+  . rows 258.5 - 261.5: writes 100% ignored
+  . rows 261.5 - 262:   writes maybe ignored
+  . ? - reads [TODO]
+
+  [TODO: This isn't quite right...]
+
 
 Character patterns
 ------------------
@@ -246,6 +278,7 @@ VSYNC period: 16.7151ms -- 59.826 Hz
 
 Row 260 starts on VSYNC falling edge. (Actual row counter value is unknown.)
 - VBL is HIGH during rows 248-15 (total 31).
+- Pixels are rendered during rows 16-247 (VBL = 0).
 - VSYNC is HIGH (\CSYNC is inverted) during rows 257-259.
 
 Rows 260- 15: VBL = 1, VSYNC = 0
@@ -276,7 +309,7 @@ Rows 257-259: VBL = 1, VSYNC = 1
 Column 0 starts on HSYNC falling edge (\CSYNC falling). (Actual column counter value is unknown.)
 - VBL toggles on column 257 + 3q.
 - HSYNC is HIGH during columns 240-259.
-- Pixels are rendered during columns 23-230.
+- Pixels are rendered during columns 23-230 (HBL = 0).
 
 Columns   0- 22: HBL = 1, HSYNC = 0
 Columns  23-230: HBL = 0, HSYNC = 0
@@ -306,29 +339,45 @@ that it takes to output two rows.  After being rendered, the two rows
 are then output, while simultaneously the sprites for the next two
 rows are rendered.
 
+Sprite evaluation + rendering happens on rows 2-253.  Taking VBL into
+account, sprites with y >= 123 (0x7B) are effectively invisible (not output).
+
 Sprites are evaluated in order from lowest to highest priority
 (attribute index).  Evaluation determines if the sprite is visible in
 the current 2-row.  A visible sprite is rendered immediately following
 evaluation of that sprite.
 
+Evaluation reads sprite attributes from the shadow copy RAM.
+
 Evaluation and rendering algorithm:
 
-for idx in 0 .. 127:
-    # Evaluate
-    sa = spr_attr[idx]
-    if row_in_range(sa) and sa.color != 0:
-        # Render
-        for pos in 0 .. (width / 4 - 1):
-            Read a byte of sprite pattern data from VRAM
-            Draw pattern to render buffer
+    def is_spr_in_range(sa):
+        return (sa.sy + sa.start_line) & 0x7F == current_row
+
+    for idx in 0 .. 127:
+        # Evaluate
+        sa = shadow_sprite_attr[idx]
+        if is_spr_in_range(sa) and sa.color != 0:
+            # Update start line
+            sa.start_line += 1
+            if !sa.link_y and sa.start_line > 7:
+                sa.start_line = 0
+            # Render
+            for pos in 0 .. (width / 4 - 1):
+                Read a byte of sprite pattern data from VRAM
+                Draw pattern to render buffer
 
 Each step takes a fixed number of VRAM bus cycles:
-  Evaluation - 1 cycle
-  Render - 1 + (width in pixels / 4) cycles
+  Evaluate: 1 cycle
+  Render: 1 + (width in pixels / 4) cycles
 
 Sprite width includes modifications by attribute flags that double
 (link) and halve the sprite.  For example, a half-width sprite only
-takes 1 eval. and 3 render cycles.
+takes 3 render cycles.
+
+The start line is always updated for a sprite that passes the
+evaluation test.  Because the start line is also used to calculate the
+VRAM address, the update takes effect on the next 2-row.
 
 There are a maximum of 251 VRAM bus cycles (502p) available for sprite
 evaluation / rendering.  Due to this limitation, at most 41 - 24
@@ -342,3 +391,30 @@ CPU access replaces the intended sprite render access.  The sprite
 pattern data seen by rendering is replaced by 0 (transparent).  Dragon
 Ball shows this effect near the top of the screen, most notably on the
 edges of the scrolling land.
+
+
+Interesting Phenomena
+---------------------
+
+For N = 3-7 (1-15 if double-height), place a sprite at Y, start line
+== N, such that (Y + N) >= 0x81.  The top portion of the sprite will
+be rendered at the bottom of the screen as if start line was 0.
+
+For N = 8-15, place a normal height sprite at Y, start line = N.
+Sprite 2-row (N - 8) will be rendered at sprite Y pos ((Y + N) &
+0x7F).  If (Y + N) >= 0x81, then the top portion of the sprite will be
+rendered at the bottom of the screen as if start line was ((N - 7) &
+7).
+
+Place all 128 sprites at the same Y pos >= 0x78 (0x70 if
+double-height).  As expected, only the first 41 sprites will appear.
+Now, in frame 0, set R0 bit 3.  In the frame after R0 is latched
+(frame 1), nothing changes.  In the next three frames (frames 2-4),
+the sprites rendered in the previous frame will disappear, and the
+next 20-30 sprites will appear, limited by the render timeout.  This
+repeats every frame until all sprites have disappeared.
+
+Place a sprite at Y pos < 0x78 (0x70 if double-height), start line >
+0.  Now set R0 bit 3.  In the frame after R0 is latched (frame 1),
+nothing changes.  In all frames afterwards (frames 2 on), all lines of
+that sprite will appear, as if start line was 0.
