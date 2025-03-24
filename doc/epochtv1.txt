@@ -104,8 +104,8 @@ R1 ($3401)
 . bits 3-0: hi-res bitmap BG color
 
 R2 ($3402) - Character / graphics window split
-. bits 3-0: XMAX: pos = (XMAX * 16) - 24
-. bits 7-4: YMAX: pos = (YMAX * 16) - 23
+. bits 3-0: XMAX: tile pos tx = XMAX * 2
+. bits 7-4: YMAX: tile pos ty = YMAX * 1
 
 R3 ($3403)
 . bits 7-4: char. FG color
@@ -153,15 +153,16 @@ only the area (1,2)-(204,231).
 Background
 ----------
 
-Screen is divided into character and graphics areas.
+Screen is tiled and divided into character and graphics areas.
+
+  32x16 tilemap, 8x16 tiles
+  Tile @ (tx, ty) draws at render coord. (tx*8 - 19, ty*16 - 16)
 
   Character
   ---------
 
-  32x16 tilemap, 8x16 tiles
-  Character pattern is 8x8, drawn in top half of tile
-  Tile @ (tx, ty) draws at screen coord. (tx*8 - 17, ty*16 - 16)
-    Characters in tiles (2,1)-(28,15) fall within the render area
+  Character pattern is 6x8, drawn in top-right corner of tile
+  Characters in tiles (2,1)-(28,15) fall within the render area
 
 
   Bitmapped graphics
@@ -169,7 +170,16 @@ Screen is divided into character and graphics areas.
 
   Two resolutions:
   - lo-res: 32x32 bitmap, 4bpp color
+
+    b[3-0] color in tile top
+    b[7-4] color in tile bottom
+
   - hi-res: 64x64 bitmap, 1bpp color
+
+    b3 b2  tile top
+    b1 b0
+    b7 b6
+    b5 b4  tile bottom
 
 
 Sprite pattern
@@ -247,6 +257,7 @@ Character patterns
 7x pqrs tuvw xyz{ |}~■
 
 8x-Fx repeat 0x-7x
+All patterns are only 6 bits wide.
 
 
 Colors
@@ -329,6 +340,20 @@ VBL is not de-asserted by \RESET. If VBL was asserted going into
 
 The above behaviors suggest that the row counter is cleared on \RESET,
 and that the first rendered row is row=16.
+
+
+Background rendering
+--------------------
+
+The background -- character or bitmapped graphics -- is rendered as it
+is being output, one row at a time.
+
+Reads from background RAM do not affect rendering (i.e., they have no
+visible effect) and are not affected by rendering (i.e., they are
+always correct).
+
+Writes to background RAM take effect almost immediately.  Writes that
+complete at least 2-4p before the left edge of the tile are visible.
 
 
 Sprite rendering
