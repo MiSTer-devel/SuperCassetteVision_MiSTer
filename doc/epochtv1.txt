@@ -112,7 +112,7 @@ R3 ($3403)
 . bits 3-0: char. BG color
 
 
-Registers are read-only.
+Registers are write-only.
 
 All registers are copied into shadow registers, so that changes are
 not observed mid-frame.  The copy occurs at the start of VSYNC (row
@@ -345,8 +345,8 @@ and that the first rendered row is row=16.
 Background rendering
 --------------------
 
-The background -- character or bitmapped graphics -- is rendered as it
-is being output, one row at a time.
+The background -- character or bitmapped graphics -- is rendered just
+before it is output.
 
 Reads from background RAM do not affect rendering (i.e., they have no
 visible effect) and are not affected by rendering (i.e., they are
