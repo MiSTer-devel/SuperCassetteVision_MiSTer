@@ -1,4 +1,4 @@
-// Copyright (c) 2024 David Hunter
+// Copyright (c) 2024-2025 David Hunter
 //
 // This program is GPL licensed. See COPYING for the full license.
 
@@ -77,11 +77,8 @@ integer fin, code, i;
   assert(fin != 0) else $fatal(1, "missing RAM %s", path);
 
   // VRAM: $2000-$3FFF
-  for (i = 0; i < 2048; i++) begin
-    code = $fread(tmp, fin, 0, 2);
-    dut.vrama.mem[i] = tmp[0];
-    dut.vramb.mem[i] = tmp[1];
-  end
+  code = $fread(dut.vrama.mem, fin, 0, 2048);
+  code = $fread(dut.vramb.mem, fin, 0, 2048);
 
   // BGM: $3000-$31FF
   for (i = 0; i < 128; i++) begin

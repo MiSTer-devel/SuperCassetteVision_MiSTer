@@ -1,6 +1,6 @@
-// Epoch TV-1 - a trivial implementation
+// Epoch TV-1 - a reasonably accurate implementation
 //
-// Copyright (c) 2024 David Hunter
+// Copyright (c) 2024-2025 David Hunter
 //
 // This program is GPL licensed. See COPYING for the full license.
 
@@ -41,19 +41,12 @@ module epochtv1
    output        WAITB,
    output        SCPUB, // uPD1771C chip select
 
-   // VRAM address / data bus A, low byte
-   output [11:0] VAA,
-   input [7:0]   VAD_I,
-   output [7:0]  VAD_O,
-   output        nVARD,
-   output        nVAWR,
-
-   // VRAM address / data bus B, high byte
-   output [11:0] VBA,
-   input [7:0]   VBD_I,
-   output [7:0]  VBD_O,
-   output        nVBRD,
-   output        nVBWR,
+   // VRAM address / data bus
+   output [10:0] VA,
+   input [7:0]   VD_I,
+   output [7:0]  VD_O,
+   output        nVWE,
+   output [1:0]  nVCS,
 
    // video output
    output        VBL,
@@ -81,6 +74,7 @@ localparam [8:0] LAST_COL_HSYNC = 9'd259;
 localparam [8:0] FIRST_ROW_PRE_RENDER = FIRST_ROW_RENDER - 'd2;
 localparam [8:0] FIRST_ROW_BOC_START = LAST_ROW_RENDER + 'd2;
 
+`ifdef EPOCHTV1_HIDE_OVERSCAN
 // Visible window: 204 x 230 = (1,2)-(204,231)
 //
 // Hide render window edges, which would normally be hidden by
@@ -89,6 +83,13 @@ localparam [8:0] FIRST_ROW_VISIBLE = FIRST_ROW_RENDER + 'd2;
 localparam [8:0] LAST_ROW_VISIBLE = LAST_ROW_RENDER;
 localparam [8:0] FIRST_COL_VISIBLE = FIRST_COL_RENDER + 'd1;
 localparam [8:0] LAST_COL_VISIBLE = LAST_COL_RENDER - 'd3;
+`else
+// Visible window: same as render window
+localparam [8:0] FIRST_ROW_VISIBLE = FIRST_ROW_RENDER;
+localparam [8:0] LAST_ROW_VISIBLE = LAST_ROW_RENDER;
+localparam [8:0] FIRST_COL_VISIBLE = FIRST_COL_RENDER;
+localparam [8:0] LAST_COL_VISIBLE = LAST_COL_RENDER;
+`endif
 
 `ifdef EPOCHTV1_BORDERS
 // left/right borders
@@ -106,8 +107,8 @@ wire         render_row, render_col, render_px;
 wire         visible_row, visible_col, visible_px;
 wire         cpu_sel_bgm, cpu_sel_oam, cpu_sel_vram, cpu_sel_reg, cpu_sel_apu;
 wire         cpu_rd, cpu_wr, cpu_rdwr;
-wire         sbofp_stall;
-reg [5:0]    sbofp_bgr_idx;
+wire         sofp_ce;
+wire         sofp_stall;
 
 //////////////////////////////////////////////////////////////////////
 // MMIO registers ($1400-$1403)
@@ -383,7 +384,7 @@ wire cpu_csb_negedge = ~CSB & cpu_csb_d;
 always_ff @(posedge CLK) if (CE) begin
   if (cpu_rd) begin
     if (cpu_sel_vram)
-      cpu_do <= A[0] ? VBD_I : VAD_I;
+      cpu_do <= VD_I;
     else if (cpu_sel_bgm)
       cpu_do <= bgm_rbuf[(A[1:0]*8)+:8];
     else if (cpu_sel_oam)
@@ -408,26 +409,22 @@ assign oam_a_sel_cpu = cpu_sel_oam & cpu_rdwr;
 reg [11:0] va;
 reg [11:0] spr_vram_addr;
 
-assign va = (cpu_sel_vram & cpu_rdwr) ? A[12:1] : spr_vram_addr;
+assign va = (cpu_sel_vram & cpu_rdwr) ? A[11:0] : spr_vram_addr;
 
-assign VAA = va;
-assign VAD_O = DB_I;
-assign nVARD = 1'b0;
-assign nVAWR = ~(cpu_sel_vram & cpu_wr & ~A[0]);
-assign VBA = va;
-assign VBD_O = DB_I;
-assign nVBRD = 1'b0;
-assign nVBWR = ~(cpu_sel_vram & cpu_wr & A[0]);
-
+assign VA = va[10:0];
+assign VD_O = DB_I;
+assign nVWE = ~(cpu_sel_vram & cpu_wr);
+assign nVCS[0] = va[11];
+assign nVCS[1] = ~va[11];
 
 
 //////////////////////////////////////////////////////////////////////
 // Background (character / bitmap) pipeline
 
-wire [8:0] bgr_row;
+wire [8:0] bgr_row, bgr_col;
 wire [4:0] bgr_tx;
 wire [4:0] bgr_ty;
-wire       bgr_tx_valid;
+wire       bgr_tce;
 wire       bgr_xwin, bgr_ywin;
 wire       bgr_bm;
 wire       bgr_ch;
@@ -440,15 +437,15 @@ reg [3:0]  bgr_bm_bgc, bgr_bm_fgc;
 reg [7:0]  bgr_bm_pat;
 
 reg [3:0]  bgr_bgc, bgr_fgc;
-reg [7:0]  bgr_pxp, bgr_px;
-reg [4:0]  bgr_wa;
-reg [7:0]  bgr_we;
+reg [7:0]  bgr_pat, bgr_shift;
+reg [3:0]  bgr_px;
 
-assign bgr_row = row + 1; // +1 aligns BG w/ render window top
+assign bgr_row = row;
+assign bgr_col = col;
 
-assign bgr_tx = sbofp_bgr_idx[4:0];
+assign bgr_tx = bgr_col[7:3];
 assign bgr_ty = bgr_row[7:3];
-assign bgr_tx_valid = ~sbofp_bgr_idx[5];
+assign bgr_tce = bgr_col[2:0] == 3'd4;
 
 assign bgr_xwin = (bgr_tx[4:1] < bm_xmax) ^ bm_invx;
 assign bgr_ywin = (bgr_ty[4:1] < bm_ymax) ^ bm_invy;
@@ -464,7 +461,7 @@ assign bgr_bgm_rd = bgm2_rbuf[(bgr_tx[1:0]*8)+:8];
 assign chr_a = {bgr_bgm_rd[6:0], bgr_row[2:0]};
 assign bgr_ch_bgc = ch_clr_bg;
 assign bgr_ch_fgc = ch_clr_fg;
-assign bgr_ch_pat = bgr_ty[0] ? 0 : chr_rbuf;
+assign bgr_ch_pat = bgr_ty[0] ? 0 : {2'b00, chr_rbuf[7:2]};
 
 // Interpret BGM data as bitmap data
 wire [2:0] bgr_bm_hipat_sel = {~bgr_row[3:2], 1'b0};
@@ -491,15 +488,21 @@ end
 // Background patterns are reversed
 always @* begin
   for (int i = 0; i < 8; i++)
-    bgr_pxp[7-i] = bgr_ch ? bgr_ch_pat[i] : bgr_bm_pat[i];
+    bgr_pat[7-i] = bgr_ch ? bgr_ch_pat[i] : bgr_bm_pat[i];
 end
 
 always @(posedge CLK) if (CE) begin
-  bgr_bgc <= bgr_ch ? bgr_ch_bgc : bgr_bm_bgc;
-  bgr_fgc <= bgr_ch ? bgr_ch_fgc : bgr_bm_fgc;
-  bgr_px <= bgr_pxp;
-  bgr_wa <= bgr_tx;
-  bgr_we <= {8{bgr_tx_valid}};
+  if (bgr_tce) begin
+    bgr_bgc <= bgr_ch ? bgr_ch_bgc : bgr_bm_bgc;
+    bgr_fgc <= bgr_ch ? bgr_ch_fgc : bgr_bm_fgc;
+    bgr_shift <= bgr_pat;
+  end
+  else
+    bgr_shift <= {1'b0, bgr_shift[7:1]};
+end
+
+always @* begin
+  bgr_px = bgr_shift[0] ? bgr_fgc : bgr_bgc;
 end
 
 
@@ -519,7 +522,7 @@ typedef struct packed
 } s_objattr;
 
 reg [6:0]   spr_tile;
-wire [15:0] spr_pat;
+wire [7:0]  spr_pat;
 reg [6:0]   oam_idx;
 s_objattr   spr_oa;
 reg [8:0]   spr_y0;
@@ -546,10 +549,11 @@ reg         spr_dact;
 reg [7:0]   spr_dpat;
 reg         spr_dact_d, spr_dact_d2;
 reg [15:0]  spr_dsr;            // draw shift register
+reg         spr_dnc;            // drawing nibble (4 px) counter
 reg [7:0]   spr_dsx;            // current drawing column
 reg [3:0]   spr_dclr;           // current sprite color
 
-assign spr_pat = {VBD_I, VAD_I};
+assign spr_pat = VD_I;
 assign oam2_ra = oam_idx;
 assign spr_oa = oam2_rbuf;
 
@@ -561,11 +565,11 @@ assign spr_dbl_h = ~(spr_half_h | spr_2clr) & spr_oa.link_y;
 assign spr_2clr = sp_2clrm & oam_idx[5];
 assign spr_2halves = spr_dbl_w | (spr_2clr & ~spr_skip_2clr);
 
-assign spr_vram_addr = {1'b0, spr_tile, spr_y[3:1], spr_dr};
+assign spr_vram_addr = {spr_tile, spr_y[3:1], spr_dr, spr_dnc};
 
 assign spr_w = spr_half_w ? 5'd7 : spr_dbl_w ? 5'd31 : 5'd15;
 assign spr_h = spr_half_h ? 5'd7 : spr_dbl_h ? 5'd31 : 5'd15;
-assign spr_y0 = spr_oa.y*2 + 1; // +1 aligns sprites w/ BG
+assign spr_y0 = spr_oa.y*2;
 assign spr_y_in_range = row >= spr_y0 + 9'(spr_vs) &&
                         row <= spr_y0 + 9'(spr_h);
 assign spr_visible = |spr_oa.color & |spr_oa.y & spr_y_in_range;
@@ -624,32 +628,33 @@ always @* begin
   if (spr_dl | spr_dr) begin
     spr_dact = 1'b1;
     for (int i = 0; i < 8; i++) begin
-      spr_dpat[i] = spr_pat[4'd15 - {~i[2], spr_y[0], i[1:0]}];
+      spr_dpat[i] = spr_pat[3'd7 - i[2:0]];
     end
   end
 end
 
-always_ff @(posedge CLK) if (CE) begin
-  if (~sbofp_stall) begin
+always_ff @(posedge CLK) if (sofp_ce) begin
+  if (~sofp_stall) begin
     spr_dsr <= {spr_dpat, spr_dsr[15:8]};
 
     spr_dact_d <= spr_dact;
     if (spr_d0) begin
-      spr_dsx <= spr_oa.x*2 - 6; // -6 aligns sprites w/ background
+      spr_dsx <= spr_oa.x*2;
       spr_dclr <= spr_color;
     end
     else if (spr_dact_d) begin
-      spr_dsx <= spr_dsx + 8'd8;
+      spr_dsx <= spr_dsx + 8'd4;
     end
 
     spr_dact_d2 <= spr_dact_d;
   end
 end
 
-function is_dsr_set(reg [15:0] dsr, int off, reg [2:0] x0);
+function is_dsr_set(reg [15:0] dsr, int off, reg [1:0] x0, reg y);
 reg [4:0] p;
   begin
-    p = 5'd8 + off[4:0] - 5'(x0);
+    p = 5'd4 + off[4:0] - 5'(x0);
+    p = {p[3:2], y, p[1:0]};    // y selects the nibble
     is_dsr_set = dsr[4'(p)];
   end
 endfunction
@@ -657,8 +662,9 @@ endfunction
 always @* begin
   spr_olb_we = 0;
   if (spr_dact_d | spr_dact_d2) begin
-    for (int i = 0; i < 8; i++) begin
-      spr_olb_we[i[2:0]] = is_dsr_set(spr_dsr, i, spr_dsx[2:0]);
+    for (int i = 0; i < 4; i++) begin
+      for (int y = 0; y < 2; y++)
+        spr_olb_we[{i[1:0], y[0]}] = is_dsr_set(spr_dsr, i, spr_dsx[1:0], y[0]);
     end
   end
 end
@@ -666,27 +672,27 @@ end
 
 //////////////////////////////////////////////////////////////////////
 // Object Line Buffer (OLB)
-// - 8 pixels wide to enable writing tile (1/2 sprite) in one cycle
+// - 8 pixels wide to enable writing VRAM fetch (4x2 pixels) in one cycle
 // - pixel = 4 bit color
-// - two full rows, used in ping-pong fashion
+// - two pairs of full rows, used in ping-pong fashion
 
-reg [5:0]   olb_wa;
+reg [6:0]   olb_wa;
 reg [31:0]  olb_wd;
 reg [7:0]   olb_we;
-wire [5:0]  olb_ra;
+wire [6:0]  olb_ra;
 reg [31:0]  olb_rd;
 wire        olb_re;
 genvar      olb_gi;
 
 reg [31:0]  olb_rbuf [2];
 
-// Declare one array per row. Each array should infer a simple
+// Declare one array per 2-row. Each array should infer a simple
 // dual-port RAM.
 generate
   for (olb_gi = 0; olb_gi < 2; olb_gi++) begin :olb_row
 
-  reg [31:0] mem [32];
-  reg [4:0]  addr;
+  reg [31:0] mem [64];
+  reg [5:0]  addr;
   reg [31:0] wbuf;
   reg [7:0]  we;
 
@@ -700,17 +706,18 @@ generate
     end
 
     always @* begin
-      if (olb_wa[5] == olb_gi[0]) begin
-        // This row is being written to.
-        addr = olb_wa[4:0];
+      if (olb_wa[6] == olb_gi[0]) begin
+        // This 2-row is being written to.
+        addr = olb_wa[5:0];
         wbuf = olb_wd;
         we = olb_we;
       end
-      else /*if (olb_ra[5] == olb_gi[0])*/ begin
-        // This row is being read from.
-        addr = olb_ra[4:0];
+      else /*if (olb_ra[6] == olb_gi[0])*/ begin
+        // This 2-row is being read from.
+        // TODO: Clear after reading
+        addr = olb_ra[5:0];
         wbuf = 0;
-        we = 0;
+        we = {8{CE & row[0]}}; //XXX
       end
     end
   end
@@ -718,149 +725,142 @@ endgenerate
 
 always_ff @(posedge CLK) if (CE) begin
   if (olb_re) begin
-    olb_rd <= olb_rbuf[olb_ra[5]]; // select read row
+    olb_rd <= olb_rbuf[olb_ra[6]]; // select read 2-row
   end
 end
 
 
 //////////////////////////////////////////////////////////////////////
-// Sprite / background OLB fill pipeline
+// Sprite OLB fill pipeline
 
 typedef enum reg [2:0]
 {
  SST_IDLE,
- SST_BG,
  SST_EVAL,
  SST_DRAW_L,
  SST_DRAW_R,
  SST_2CLR_FLUSH,
  SST_DRAW_L2,
  SST_DRAW_R2
-} e_sbofp_st;
+} e_sofp_st;
 
-e_sbofp_st sbofp_st;
+e_sofp_st sofp_st;
 
-wire sbofp_stall_pre;
-reg  sbofp_stall_d;
+wire sofp_stall_pre;
+reg  sofp_stall_d;
 
-wire [6:0] sbofp_oam_idx_max;
+wire [6:0] sofp_oam_idx_max;
 
-wire sbofp_wsel;
+wire sofp_wsel;
 
-reg [3:0]  sbofp_wdc_bg, sbofp_wdc_fg;
-reg [7:0]  sbofp_wds;
+reg [3:0]  sofp_wdc_bg, sofp_wdc_fg;
+reg [7:0]  sofp_wds;
 
-// sbofp_stall deassertion needs to lag cpu_rdwr deassertion by 1x CE,
+assign sofp_ce = CE & ~col[0]; // TODO: sync w/ VRAM bus
+
+// sofp_stall deassertion needs to lag cpu_rdwr deassertion by 1x CE,
 // to give memories a chance to recover.
-assign sbofp_stall_pre = cpu_sel_vram & cpu_rdwr;
+assign sofp_stall_pre = cpu_sel_vram & cpu_rdwr;
 always_ff @(posedge CLK) if (CE) begin
-  sbofp_stall_d <= sbofp_stall_pre;
+  sofp_stall_d <= sofp_stall_pre;
 end
-assign sbofp_stall = sbofp_stall_pre | sbofp_stall_d;
+assign sofp_stall = sofp_stall_pre | sofp_stall_d;
 
-assign sbofp_oam_idx_max = sp_hide7 ? 7'd63 : 7'd127;
+assign sofp_oam_idx_max = sp_hide7 ? 7'd63 : 7'd127;
 
 initial begin
-  sbofp_st = SST_IDLE;
-  sbofp_bgr_idx = 6'd32;
+  sofp_st = SST_IDLE;
   oam_idx = 0;
+  spr_dnc = 0;
 end
 
-always_ff @(posedge CLK) if (CE) begin
+always_ff @(posedge CLK) if (sofp_ce) begin
   if (~(pre_render_row | render_row)) begin
-    sbofp_st <= SST_IDLE;
+    sofp_st <= SST_IDLE;
   end
-  else if (col == 0) begin
-    sbofp_st <= SST_BG;
-    sbofp_bgr_idx <= 0;
+  else if ((col == 0) & (~row[0])) begin
+    sofp_st <= e_sofp_st'(sp_ena ? SST_EVAL : SST_IDLE);
+    oam_idx <= 0;
   end
-  else if (~sbofp_stall) begin
-    if (sbofp_st == SST_BG) begin
-      if (sbofp_bgr_idx == 6'd32) begin // +1 for pipeline delay
-        oam_idx <= 0;
-        sbofp_st <= e_sbofp_st'(sp_ena ? SST_EVAL : SST_IDLE);
-      end
-      sbofp_bgr_idx <= sbofp_bgr_idx + 1'd1;
+  else if (~sofp_stall) begin
+    if (sofp_st == SST_IDLE) begin
     end
-    else if (sbofp_st == SST_EVAL) begin
+    else if (sofp_st == SST_EVAL) begin
       if (spr_visible) begin
-        sbofp_st <= e_sbofp_st'(spr_skip_dl ? SST_DRAW_R : SST_DRAW_L);
+        sofp_st <= e_sofp_st'(spr_skip_dl ? SST_DRAW_R : SST_DRAW_L);
+        spr_dnc <= 0;
       end
       else begin
-        sbofp_st <= e_sbofp_st'((oam_idx < sbofp_oam_idx_max) ? SST_EVAL : SST_IDLE);
+        sofp_st <= e_sofp_st'((oam_idx < sofp_oam_idx_max) ? SST_EVAL : SST_IDLE);
         oam_idx <= oam_idx + 1'd1;
       end
     end
-    else if ((sbofp_st == SST_DRAW_L) & ~spr_skip_dr) begin
-      sbofp_st <= SST_DRAW_R;
-    end
-    else if (((sbofp_st == SST_DRAW_L) | (sbofp_st == SST_DRAW_R)) &
-             spr_2clr & ~spr_skip_2clr) begin
-      sbofp_st <= SST_2CLR_FLUSH;
-    end
-    else if (((sbofp_st == SST_DRAW_L) | (sbofp_st == SST_DRAW_R) |
-              (sbofp_st == SST_2CLR_FLUSH)) &
-             spr_2halves & ~spr_skip_dl) begin
-      sbofp_st <= SST_DRAW_L2;
-    end
-    else if (((sbofp_st == SST_DRAW_R) | (sbofp_st == SST_DRAW_L2)) &
-             spr_2halves & ~spr_skip_dr) begin
-      sbofp_st <= SST_DRAW_R2;
-    end
-    else if (spr_dl | spr_dr) begin
-      sbofp_st <= e_sbofp_st'((oam_idx < 7'd127) ? SST_EVAL : SST_IDLE);
-      oam_idx <= oam_idx + 1'd1;
+    else begin
+      if (spr_dnc) begin
+        if ((sofp_st == SST_DRAW_L) & ~spr_skip_dr) begin
+          sofp_st <= SST_DRAW_R;
+        end
+        else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R)) &
+                 spr_2clr & ~spr_skip_2clr) begin
+          sofp_st <= SST_2CLR_FLUSH;
+        end
+        else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R) |
+                  (sofp_st == SST_2CLR_FLUSH)) &
+                 spr_2halves & ~spr_skip_dl) begin
+          sofp_st <= SST_DRAW_L2;
+        end
+        else if (((sofp_st == SST_DRAW_R) | (sofp_st == SST_DRAW_L2)) &
+                 spr_2halves & ~spr_skip_dr) begin
+          sofp_st <= SST_DRAW_R2;
+        end
+        else if (spr_dl | spr_dr) begin
+          sofp_st <= e_sofp_st'((oam_idx < 7'd127) ? SST_EVAL : SST_IDLE);
+          oam_idx <= oam_idx + 1'd1;
+        end
+      end
+      spr_dnc <= ~spr_dnc;
     end
   end
 end
 
-assign spr_d0 = (~spr_dw2 | spr_2clr) & (spr_dl | (spr_dr & spr_skip_dl));
-assign spr_dw2 = (sbofp_st == SST_DRAW_L2) | (sbofp_st == SST_DRAW_R2);
-assign spr_dl = (sbofp_st == SST_DRAW_L) | (sbofp_st == SST_DRAW_L2);
-assign spr_dr = (sbofp_st == SST_DRAW_R) | (sbofp_st == SST_DRAW_R2);
+assign spr_d0 = (~spr_dw2 | spr_2clr) & (spr_dl | (spr_dr & spr_skip_dl)) & ~spr_dnc;
+assign spr_dw2 = (sofp_st == SST_DRAW_L2) | (sofp_st == SST_DRAW_R2);
+assign spr_dl = (sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_L2);
+assign spr_dr = (sofp_st == SST_DRAW_R) | (sofp_st == SST_DRAW_R2);
 
-assign sbofp_wsel = ~row[0];
+assign sofp_wsel = ~row[1];
 
 always @* begin
-  olb_wa[5] = sbofp_wsel;
-  if (sbofp_st == SST_BG) begin
-    olb_wa[4:0] = bgr_wa;
-    sbofp_wdc_bg = bgr_bgc;
-    sbofp_wdc_fg = bgr_fgc;
-    sbofp_wds = bgr_px;
-    olb_we = bgr_we;
-  end
-  else begin
-    olb_wa[4:0] = spr_dsx[7:3];
-    sbofp_wdc_bg = spr_dclr;
-    sbofp_wdc_fg = spr_dclr;
-    sbofp_wds = 0;
-    olb_we = spr_olb_we;
-  end
+  olb_wa[6] = sofp_wsel;
+  olb_wa[5:0] = spr_dsx[7:2];
+  sofp_wdc_bg = spr_dclr;
+  sofp_wdc_fg = spr_dclr;
+  sofp_wds = 0;
+  olb_we = spr_olb_we;
 end
 
 always @* begin
   for (int i = 0; i < 8; i++) begin
-    olb_wd[(i*4)+:4] = sbofp_wds[i] ? sbofp_wdc_fg : sbofp_wdc_bg;
+    olb_wd[(i*4)+:4] = sofp_wds[i] ? sofp_wdc_fg : sofp_wdc_bg;
   end
 end
 
-wire [7:0] sbofp_rx;
-reg [2:0]  sbofp_rrs;
-wire       sbofp_rsel;
-wire [3:0] sbofp_px;
+wire [7:0] sofp_rx;
+reg [2:0]  sofp_rrs;
+wire       sofp_rsel;
+wire [3:0] sofp_px;
 
-assign sbofp_rsel = row[0];
-assign sbofp_rx = col[7:0] - 6; // -6 aligns BG+SPR w/ render window left
+assign sofp_rsel = row[1];
+assign sofp_rx = col[7:0];
 
-assign olb_ra = {sbofp_rsel, sbofp_rx[7:3]};
-assign olb_re = ~|sbofp_rx[2:0];
+assign olb_ra = {sofp_rsel, sofp_rx[7:2]};
+assign olb_re = ~|sofp_rx[1:0];
 
 always_ff @(posedge CLK) if (CE) begin
-  sbofp_rrs <= sbofp_rx[2:0];
+  sofp_rrs <= {sofp_rx[1:0], row[0]};
 end
 
-assign sbofp_px = olb_rd[(sbofp_rrs*4)+:4];
+assign sofp_px = olb_rd[(sofp_rrs*4)+:4];
 
 
 //////////////////////////////////////////////////////////////////////
@@ -910,7 +910,7 @@ end
 always @* begin
   pd = 4'd1; // black borders
   if (render_visible) begin
-    pd = sbofp_px[3:0];
+    pd = |sofp_px ? sofp_px : bgr_px;
   end
 end
 

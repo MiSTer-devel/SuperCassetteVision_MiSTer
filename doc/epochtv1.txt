@@ -400,6 +400,8 @@ Sprite width includes modifications by attribute flags that double
 (link) and halve the sprite.  For example, a half-width sprite only
 takes 3 render cycles.
 
+[TODO: Cycles for 2-color sprites?]
+
 The start line is always updated for a sprite that passes the
 evaluation test.  Because the start line is also used to calculate the
 VRAM address, the update takes effect on the next 2-row.

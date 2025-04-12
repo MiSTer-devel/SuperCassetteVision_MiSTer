@@ -1,6 +1,6 @@
 // Super Cassette Vision - an emulator
 //
-// Copyright (c) 2024 David Hunter
+// Copyright (c) 2024-2025 David Hunter
 //
 // This program is GPL licensed. See COPYING for the full license.
 
@@ -59,9 +59,10 @@ wire        vdc_db_oe;
 wire        vdc_ncs;
 wire        vdc_waitb;
 wire        vdc_scpub;
-wire [11:0] vaa, vba;
-wire [7:0]  vad_i, vad_o, vbd_i, vbd_o;
-wire        nvard, nvawr, nvbrd, nvbwr;
+wire [10:0] va;
+wire [7:0]  vd_i, vd_o, vrama_do, vramb_do;
+wire        nvwe;
+wire [1:0]  nvcs;
 wire        vbl;
 wire        de, hs, vs;
 wire [23:0] rgb;
@@ -141,17 +142,11 @@ epochtv1 vdc
    .WAITB(vdc_waitb),
    .SCPUB(vdc_scpub),
 
-   .VAA(vaa),
-   .VAD_I(vad_i),
-   .VAD_O(vad_o),
-   .nVARD(nvard),
-   .nVAWR(nvawr),
-
-   .VBA(vba),
-   .VBD_I(vbd_i),
-   .VBD_O(vbd_o),
-   .nVBRD(nvbrd),
-   .nVBWR(nvbwr),
+   .VA(va),
+   .VD_I(vd_i),
+   .VD_O(vd_o),
+   .nVWE(nvwe),
+   .nVCS(nvcs),
 
    .VBL(vbl),
    .DE(de),
@@ -160,16 +155,16 @@ epochtv1 vdc
    .RGB(rgb)
    );
 
-dpram #(.DWIDTH(8), .AWIDTH(12)) vrama
+dpram #(.DWIDTH(8), .AWIDTH(11)) vrama
   (
    .CLK(CLK),
 
-   .nCE(nvard & nvawr),
-   .nWE(nvawr),
-   .nOE(nvard),
-   .A(vaa),
-   .DI(vad_o),
-   .DO(vad_i),
+   .nCE(nvcs[0]),
+   .nWE(nvwe),
+   .nOE(~nvwe),
+   .A(va),
+   .DI(vd_o),
+   .DO(vrama_do),
 
    .nCE2(1'b1),
    .nWE2(1'b1),
@@ -179,16 +174,16 @@ dpram #(.DWIDTH(8), .AWIDTH(12)) vrama
    .DO2()
    );
 
-dpram #(.DWIDTH(8), .AWIDTH(12)) vramb
+dpram #(.DWIDTH(8), .AWIDTH(11)) vramb
   (
    .CLK(CLK),
 
-   .nCE(nvbrd & nvbwr),
-   .nWE(nvbwr),
-   .nOE(nvbrd),
-   .A(vba),
-   .DI(vbd_o),
-   .DO(vbd_i),
+   .nCE(nvcs[1]),
+   .nWE(nvwe),
+   .nOE(~nvwe),
+   .A(va),
+   .DI(vd_o),
+   .DO(vramb_do),
 
    .nCE2(1'b1),
    .nWE2(1'b1),
@@ -198,6 +193,7 @@ dpram #(.DWIDTH(8), .AWIDTH(12)) vramb
    .DO2()
    );
 
+assign vd_i = (~nvcs[0]) ? vrama_do : (~nvcs[1]) ? vramb_do : 8'hxx;
 assign apu_ack = apu_pb_o[0];
 
 upd1771c apu
