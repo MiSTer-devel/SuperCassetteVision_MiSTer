@@ -107,6 +107,8 @@ wire         render_row, render_col, render_px;
 wire         visible_row, visible_col, visible_px;
 wire         cpu_sel_bgm, cpu_sel_oam, cpu_sel_vram, cpu_sel_reg, cpu_sel_apu;
 wire         cpu_rd, cpu_wr, cpu_rdwr;
+reg [11:0]   spr_vram_addr;
+wire         spr_vram_re_p;
 wire         sofp_ce;
 wire         sofp_stall;
 
@@ -407,7 +409,6 @@ assign oam_a_sel_cpu = cpu_sel_oam & cpu_rdwr;
 // VRAM address / data bus interface
 
 reg [11:0] va;
-reg [11:0] spr_vram_addr;
 
 assign va = (cpu_sel_vram & cpu_rdwr) ? A[11:0] : spr_vram_addr;
 
@@ -521,8 +522,13 @@ typedef struct packed
     reg         link_y;
 } s_objattr;
 
+reg [11:0]  spr_vram_addr_d;
+reg         spr_vram_re;
+wire        spr_rl, spr_rr;     // reading left/right half (of 16-px pat.)
+reg         spr_rnc;            // read nibble counter
+
 reg [6:0]   spr_tile;
-wire [7:0]  spr_pat;
+reg [7:0]   spr_pat;
 reg [6:0]   oam_idx;
 s_objattr   spr_oa;
 reg [8:0]   spr_y0;
@@ -553,7 +559,27 @@ reg         spr_dnc;            // drawing nibble (4 px) counter
 reg [7:0]   spr_dsx;            // current drawing column
 reg [3:0]   spr_dclr;           // current sprite color
 
-assign spr_pat = VD_I;
+initial begin
+  spr_vram_re = 0;
+  spr_rnc = 0;
+end
+
+always @* begin
+  spr_vram_addr = spr_vram_addr_d;
+  if (spr_vram_re_p & spr_vram_re)
+    spr_vram_addr = {spr_tile, spr_y[3:1], spr_rr, spr_rnc};
+end
+
+always_ff @(posedge CLK) if (sofp_ce) begin
+  if (spr_vram_re_p)
+    spr_rnc <= spr_vram_re & ~spr_rnc;
+  if (spr_vram_re)
+    spr_pat <= VD_I;
+
+  spr_vram_re <= spr_vram_re_p;
+  spr_vram_addr_d <= spr_vram_addr;
+end
+
 assign oam2_ra = oam_idx;
 assign spr_oa = oam2_rbuf;
 
@@ -564,8 +590,6 @@ assign spr_dbl_w = ~(spr_half_w | spr_2clr) & spr_oa.link_x;
 assign spr_dbl_h = ~(spr_half_h | spr_2clr) & spr_oa.link_y;
 assign spr_2clr = sp_2clrm & oam_idx[5];
 assign spr_2halves = spr_dbl_w | (spr_2clr & ~spr_skip_2clr);
-
-assign spr_vram_addr = {spr_tile, spr_y[3:1], spr_dr, spr_dnc};
 
 assign spr_w = spr_half_w ? 5'd7 : spr_dbl_w ? 5'd31 : 5'd15;
 assign spr_h = spr_half_h ? 5'd7 : spr_dbl_h ? 5'd31 : 5'd15;
@@ -636,6 +660,8 @@ end
 always_ff @(posedge CLK) if (sofp_ce) begin
   if (~sofp_stall) begin
     spr_dsr <= {spr_dpat, spr_dsr[15:8]};
+
+    spr_dnc <= spr_rnc;
 
     spr_dact_d <= spr_dact;
     if (spr_d0) begin
@@ -737,6 +763,7 @@ typedef enum reg [2:0]
 {
  SST_IDLE,
  SST_EVAL,
+ SST_FETCH,
  SST_DRAW_L,
  SST_DRAW_R,
  SST_2CLR_FLUSH,
@@ -744,10 +771,13 @@ typedef enum reg [2:0]
  SST_DRAW_R2
 } e_sofp_st;
 
-e_sofp_st sofp_st;
+e_sofp_st sofp_st, sofp_st_next;
 
 wire sofp_stall_pre;
 reg  sofp_stall_d;
+wire sofp_row;
+wire sofp_row_start;
+wire sofp_row_end;
 
 wire [6:0] sofp_oam_idx_max;
 
@@ -768,60 +798,78 @@ assign sofp_stall = sofp_stall_pre | sofp_stall_d;
 
 assign sofp_oam_idx_max = sp_hide7 ? 7'd63 : 7'd127;
 
+assign sofp_row = pre_render_row | render_row;
+assign sofp_row_start = sofp_row & (col == 0) & ~row[0];
+assign sofp_row_end = sofp_row & (col >= 9'd241) & row[0];
+
 initial begin
   sofp_st = SST_IDLE;
   oam_idx = 0;
   spr_dnc = 0;
 end
 
-always_ff @(posedge CLK) if (sofp_ce) begin
-  if (~(pre_render_row | render_row)) begin
-    sofp_st <= SST_IDLE;
+always @* begin
+  sofp_st_next = sofp_st;
+  if (~sofp_row | sofp_row_end) begin
+    sofp_st_next = SST_IDLE;
   end
-  else if ((col == 0) & (~row[0])) begin
-    sofp_st <= e_sofp_st'(sp_ena ? SST_EVAL : SST_IDLE);
-    oam_idx <= 0;
+  else if (sofp_row_start) begin
+    sofp_st_next = e_sofp_st'(sp_ena ? SST_EVAL : SST_IDLE);
   end
   else if (~sofp_stall) begin
     if (sofp_st == SST_IDLE) begin
     end
     else if (sofp_st == SST_EVAL) begin
       if (spr_visible) begin
-        sofp_st <= e_sofp_st'(spr_skip_dl ? SST_DRAW_R : SST_DRAW_L);
-        spr_dnc <= 0;
+        sofp_st_next = SST_FETCH;
       end
       else begin
-        sofp_st <= e_sofp_st'((oam_idx < sofp_oam_idx_max) ? SST_EVAL : SST_IDLE);
-        oam_idx <= oam_idx + 1'd1;
+        sofp_st_next = e_sofp_st'((oam_idx < sofp_oam_idx_max) ? SST_EVAL : SST_IDLE);
       end
+    end
+    else if (sofp_st == SST_FETCH) begin
+      sofp_st_next = e_sofp_st'(spr_skip_dl ? SST_DRAW_R : SST_DRAW_L);
     end
     else begin
       if (spr_dnc) begin
         if ((sofp_st == SST_DRAW_L) & ~spr_skip_dr) begin
-          sofp_st <= SST_DRAW_R;
+          sofp_st_next = SST_DRAW_R;
         end
         else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R)) &
                  spr_2clr & ~spr_skip_2clr) begin
-          sofp_st <= SST_2CLR_FLUSH;
+          sofp_st_next = SST_2CLR_FLUSH;
         end
         else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R) |
                   (sofp_st == SST_2CLR_FLUSH)) &
                  spr_2halves & ~spr_skip_dl) begin
-          sofp_st <= SST_DRAW_L2;
+          sofp_st_next = SST_DRAW_L2;
         end
         else if (((sofp_st == SST_DRAW_R) | (sofp_st == SST_DRAW_L2)) &
                  spr_2halves & ~spr_skip_dr) begin
-          sofp_st <= SST_DRAW_R2;
+          sofp_st_next = SST_DRAW_R2;
         end
         else if (spr_dl | spr_dr) begin
-          sofp_st <= e_sofp_st'((oam_idx < 7'd127) ? SST_EVAL : SST_IDLE);
-          oam_idx <= oam_idx + 1'd1;
+          sofp_st_next = e_sofp_st'((oam_idx < 7'd127) ? SST_EVAL : SST_IDLE);
         end
       end
-      spr_dnc <= ~spr_dnc;
     end
   end
 end
+
+always_ff @(posedge CLK) if (sofp_ce) begin
+  sofp_st <= sofp_st_next;
+
+  if (sofp_row_start) begin
+    oam_idx <= 0;
+  end
+  else if ((sofp_st >= SST_EVAL) & (sofp_st_next <= SST_EVAL)) begin
+    oam_idx <= oam_idx + 1'd1;
+  end
+end
+
+assign spr_vram_re_p = (sofp_st_next >= SST_FETCH);
+assign spr_rl = (sofp_st_next == SST_DRAW_L) | (sofp_st_next == SST_DRAW_L2);
+assign spr_rr = (sofp_st_next == SST_DRAW_R) | (sofp_st_next == SST_DRAW_R2);
 
 assign spr_d0 = (~spr_dw2 | spr_2clr) & (spr_dl | (spr_dr & spr_skip_dl)) & ~spr_dnc;
 assign spr_dw2 = (sofp_st == SST_DRAW_L2) | (sofp_st == SST_DRAW_R2);

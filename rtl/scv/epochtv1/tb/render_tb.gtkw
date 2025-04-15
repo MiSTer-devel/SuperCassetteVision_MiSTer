@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Tue Dec 17 05:58:19 2024
+[*] Tue Apr 15 03:58:20 2025
 [*]
 [dumpfile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/render_tb.vcd"
-[dumpfile_mtime] "Tue Dec 17 05:55:11 2024"
-[dumpfile_size] 46317467
+[dumpfile_mtime] "Mon Apr 14 05:26:52 2025"
+[dumpfile_size] 42607041
 [savefile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/render_tb.gtkw"
-[timestart] 0
+[timestart] 8426120000
 [size] 1288 600
 [pos] -1 -1
-*-32.156998 762652800 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-23.256998 8448090840 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -45,9 +45,8 @@
 @28
 render_tb.dut.CE
 render_tb.dut.field
-@25
-render_tb.dut.row[8:0]
 @24
+render_tb.dut.row[8:0]
 render_tb.dut.col[8:0]
 @c00200
 -cpu bus
@@ -111,9 +110,15 @@ render_tb.dut.bgr_px[3:0]
 -spr
 @22
 render_tb.dut.oam_idx[6:0]
+@28
+render_tb.dut.spr_vram_re_p
+render_tb.dut.spr_rr
+render_tb.dut.spr_rnc
+render_tb.dut.spr_vram_re
+@22
+render_tb.dut.spr_vram_addr[11:0]
 render_tb.dut.spr_oa[31:0]
 render_tb.dut.spr_tile[6:0]
-render_tb.dut.spr_vram_addr[11:0]
 @28
 render_tb.dut.spr_half_w
 render_tb.dut.spr_half_h
@@ -130,6 +135,9 @@ render_tb.dut.spr_dact_d
 @22
 render_tb.dut.spr_dpat[7:0]
 render_tb.dut.spr_dsr[15:0]
+@28
+render_tb.dut.spr_dnc
+@22
 render_tb.dut.spr_dsx[7:0]
 render_tb.dut.spr_dclr[3:0]
 @28
@@ -150,6 +158,8 @@ render_tb.dut.olb_re
 -olb
 @800200
 -sofp
+@25
+render_tb.dut.sofp_st_next[2:0]
 @24
 render_tb.dut.sofp_st[2:0]
 @22

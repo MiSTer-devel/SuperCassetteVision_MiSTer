@@ -217,7 +217,7 @@ initial #0 begin
   dut.row = dut.FIRST_ROW_BOC_START - 1;
 
   load_chr("epochtv.chr");
-  load_rams("vid-chrspr0-vram.bin");
+  load_rams("vid-spr0-vram.bin");
 
   -> init_regs;
 
