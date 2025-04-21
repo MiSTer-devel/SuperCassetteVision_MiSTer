@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Tue Apr 15 03:58:20 2025
+[*] Mon Apr 21 02:44:25 2025
 [*]
 [dumpfile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/render_tb.vcd"
-[dumpfile_mtime] "Mon Apr 14 05:26:52 2025"
-[dumpfile_size] 42607041
+[dumpfile_mtime] "Mon Apr 21 02:43:22 2025"
+[dumpfile_size] 45368932
 [savefile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/render_tb.gtkw"
-[timestart] 8426120000
+[timestart] 0
 [size] 1288 600
 [pos] -1 -1
-*-23.256998 8448090840 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-31.256998 635544000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -69,15 +69,15 @@ render_tb.dut.ioreg2[7:0]
 render_tb.dut.ioreg3[7:0]
 @1000200
 -ioreg
-@800200
+@c00200
 -boc
 @28
 render_tb.dut.boc_active
 @22
 render_tb.dut.boc_idx[6:0]
-@1000200
+@1401200
 -boc
-@800200
+@c00200
 -bgr
 @22
 render_tb.dut.bgr_tx[4:0]
@@ -104,8 +104,30 @@ render_tb.dut.bgr_bgc[3:0]
 render_tb.dut.bgr_fgc[3:0]
 render_tb.dut.bgr_pat[7:0]
 render_tb.dut.bgr_px[3:0]
-@1000200
+@1401200
 -bgr
+@800200
+-oam2
+@22
+render_tb.dut.oam2_ra[6:0]
+render_tb.dut.oam2_rbuf[31:0]
+render_tb.dut.oam2_rd[31:0]
+@28
+render_tb.dut.oam2_re
+@22
+render_tb.dut.oam2_wa1[6:0]
+render_tb.dut.oam2_wa2[6:0]
+render_tb.dut.oam2_wa[6:0]
+render_tb.dut.oam2_wbuf1[31:0]
+render_tb.dut.oam2_wbuf2[31:0]
+render_tb.dut.oam2_wbuf[31:0]
+@28
+render_tb.dut.oam2_we
+render_tb.dut.oam2_we1
+render_tb.dut.oam2_we2
+render_tb.dut.oam2_wpsel
+@1000200
+-oam2
 @800200
 -spr
 @22
@@ -125,6 +147,9 @@ render_tb.dut.spr_half_h
 render_tb.dut.spr_dbl_w
 render_tb.dut.spr_dbl_h
 render_tb.dut.spr_2clr
+@23
+render_tb.dut.spr_cy[6:0]
+@28
 render_tb.dut.spr_y_in_range
 render_tb.dut.spr_dl
 render_tb.dut.spr_dr
@@ -158,9 +183,8 @@ render_tb.dut.olb_re
 -olb
 @800200
 -sofp
-@25
-render_tb.dut.sofp_st_next[2:0]
 @24
+render_tb.dut.sofp_st_next[2:0]
 render_tb.dut.sofp_st[2:0]
 @22
 render_tb.dut.sofp_wdc_bg[3:0]

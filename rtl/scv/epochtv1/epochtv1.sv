@@ -292,10 +292,16 @@ end
 reg [31:0] oam2 [128];
 
 wire [6:0] oam2_ra;
-reg [31:0] oam2_rbuf;
-wire [6:0] oam2_wa;
-wire       oam2_we;
-wire [31:0] oam2_wbuf;
+wire       oam2_re;
+reg [31:0] oam2_rbuf, oam2_rd;
+wire       oam2_wpsel;
+wire [6:0] oam2_wa, oam2_wa1, oam2_wa2;
+wire       oam2_we, oam2_we1, oam2_we2;
+wire [31:0] oam2_wbuf, oam2_wbuf1, oam2_wbuf2;
+
+assign oam2_wa = oam2_wpsel ? oam2_wa2 : oam2_wa1;
+assign oam2_we = oam2_wpsel ? oam2_we2 : oam2_we1;
+assign oam2_wbuf = oam2_wpsel ? oam2_wbuf2 : oam2_wbuf1;
 
 always_ff @(posedge CLK) begin
   oam2_rbuf <= oam2[oam2_ra];
@@ -304,12 +310,19 @@ always_ff @(posedge CLK) begin
   end
 end
 
+always_ff @(posedge CLK) begin
+  if (oam2_re)
+    oam2_rd <= oam2_rbuf;
+end
+
 
 //////////////////////////////////////////////////////////////////////
 // BGM / OAM copier
 //
 // Copies each memory into its respective memory copy. Copy starts in
 // VBL, runs to completion, and stalls on CPU access to memory.
+
+// TODO: Don't copy BGM
 
 reg [6:0] boc_idx;
 reg       boc_active;
@@ -354,9 +367,10 @@ assign bgm2_wa = boc_idx;
 assign bgm2_we = boc_we;
 
 assign oam_ra = boc_idx;
-assign oam2_wbuf = oam_rbuf;
-assign oam2_wa = boc_idx;
-assign oam2_we = boc_we;
+assign oam2_wpsel = ~boc_active;
+assign oam2_wbuf1 = oam_rbuf;
+assign oam2_wa1 = boc_idx;
+assign oam2_we1 = boc_we;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -530,12 +544,11 @@ reg         spr_rnc;            // read nibble counter
 reg [6:0]   spr_tile;
 reg [7:0]   spr_pat;
 reg [6:0]   oam_idx;
-s_objattr   spr_oa;
-reg [8:0]   spr_y0;
+s_objattr   spr_oa, spr_oawb;
+wire [6:0]  spr_cy;             // current render row
 wire        spr_half_w, spr_half_h;
 wire        spr_dbl_w, spr_dbl_h;
 reg [4:0]   spr_y, spr_w, spr_h;
-wire [4:0]  spr_vs;             // top clip bounds
 wire        spr_2clr;           // 2-color sprite (if link_x/y)
 wire        spr_2halves;        // double-wide or 2-color (actual)
 reg [3:0]   spr_color;
@@ -581,9 +594,9 @@ always_ff @(posedge CLK) if (sofp_ce) begin
 end
 
 assign oam2_ra = oam_idx;
-assign spr_oa = oam2_rbuf;
+assign oam2_re = sofp_st == SST_EVAL;
+assign spr_oa = oam2_rd;
 
-assign spr_vs = spr_oa.start_line*2;
 assign spr_half_w = spr_oa.split;
 assign spr_half_h = spr_oa.split & spr_oa.tile[6];
 assign spr_dbl_w = ~(spr_half_w | spr_2clr) & spr_oa.link_x;
@@ -593,10 +606,9 @@ assign spr_2halves = spr_dbl_w | (spr_2clr & ~spr_skip_2clr);
 
 assign spr_w = spr_half_w ? 5'd7 : spr_dbl_w ? 5'd31 : 5'd15;
 assign spr_h = spr_half_h ? 5'd7 : spr_dbl_h ? 5'd31 : 5'd15;
-assign spr_y0 = spr_oa.y*2;
-assign spr_y_in_range = row >= spr_y0 + 9'(spr_vs) &&
-                        row <= spr_y0 + 9'(spr_h);
-assign spr_visible = |spr_oa.color & |spr_oa.y & spr_y_in_range;
+assign spr_cy = spr_oa.y + {3'd0, spr_oa.start_line};
+assign spr_y_in_range = row[7:1] == spr_cy;
+assign spr_visible = |spr_oa.color & spr_y_in_range;
 
 assign spr_skip_dl = spr_half_w & spr_oa.link_x;
 assign spr_skip_dr = spr_half_w & ~spr_oa.link_x;
@@ -640,9 +652,7 @@ always @* begin
 end
 
 always @* begin
-  spr_y = 5'(row - spr_y0);
-  if (spr_skip_dt)
-    spr_y -= 5'd8;
+  spr_y = spr_oa.start_line * 2;
 end
 assign spr_dh2 = spr_y_in_range & spr_dbl_h & spr_y[4];
 
@@ -694,6 +704,18 @@ always @* begin
     end
   end
 end
+
+// Update start line
+always @* begin
+  spr_oawb = spr_oa;
+  spr_oawb.start_line += 1'd1;
+  if (~spr_oawb.link_y & (spr_oawb.start_line > 4'd7))
+    spr_oawb.start_line = 0;
+end
+
+assign oam2_wa2 = oam_idx;
+assign oam2_we2 = oam2_re & sofp_ce & spr_visible;
+assign oam2_wbuf2 = spr_oawb;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -798,7 +820,7 @@ assign sofp_stall = sofp_stall_pre | sofp_stall_d;
 
 assign sofp_oam_idx_max = sp_hide7 ? 7'd63 : 7'd127;
 
-assign sofp_row = pre_render_row | render_row;
+assign sofp_row = (row >= 9'd2) & (row <= 9'd253);
 assign sofp_row_start = sofp_row & (col == 0) & ~row[0];
 assign sofp_row_end = sofp_row & (col >= 9'd241) & row[0];
 
