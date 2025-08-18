@@ -153,6 +153,7 @@ end
 wire         bm_ena = ioreg0[0];   // enable bitmap
 wire         bm_lores = ioreg0[1]; // bitmap res: 0=lo, 1=hi
 wire         sp_hide7 = ioreg0[2]; // hide sprites 64-127
+wire         boc_dis = ioreg0_p[3];// disable OAM copy (use shadow)
 wire         sp_ena = ioreg0[4];   // enable sprites
 wire         sp_2clrm = ioreg0[5]; // 2-color sprite mode
 wire         bm_invx = ioreg0[6];  // invert XMAX effect
@@ -347,6 +348,8 @@ end
 // Copies OAM from shadow to active. Copy starts in VBL and runs to
 // completion.
 
+// TODO: Reduce copy speed to match HW
+
 reg [6:0] boc_idx;
 reg       boc_active;
 wire      boc_we;
@@ -358,7 +361,7 @@ end
 always_ff @(posedge CLK) if (CE) begin
   if (~boc_active) begin
     if ((row == FIRST_ROW_VSYNC) & (col == 0)) begin
-      boc_active <= '1;
+      boc_active <= ~boc_dis;
       boc_idx <= 0;
     end
   end
