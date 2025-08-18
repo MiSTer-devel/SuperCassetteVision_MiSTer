@@ -96,10 +96,10 @@ integer fin, code, i;
   end
 
   code = $fread(tmp, fin, 0, 4);
-  dut.vdc.ioreg0 = tmp[0];
-  dut.vdc.ioreg1 = tmp[1];
-  dut.vdc.ioreg2 = tmp[2];
-  dut.vdc.ioreg3 = tmp[3];
+  dut.vdc.ioreg0_p = tmp[0];
+  dut.vdc.ioreg1_p = tmp[1];
+  dut.vdc.ioreg2_p = tmp[2];
+  dut.vdc.ioreg3_p = tmp[3];
   
 endtask
 
@@ -115,10 +115,10 @@ int i;
     ctl.vdc.bgm[i] = dut.vdc.bgm[i];
   for (i = 0; i < 128; i++)
     ctl.vdc.oam[i] = dut.vdc.oam[i];
-  ctl.vdc.ioreg0 = dut.vdc.ioreg0;
-  ctl.vdc.ioreg1 = dut.vdc.ioreg1;
-  ctl.vdc.ioreg2 = dut.vdc.ioreg2;
-  ctl.vdc.ioreg3 = dut.vdc.ioreg3;
+  ctl.vdc.ioreg0_p = dut.vdc.ioreg0_p;
+  ctl.vdc.ioreg1_p = dut.vdc.ioreg1_p;
+  ctl.vdc.ioreg2_p = dut.vdc.ioreg2_p;
+  ctl.vdc.ioreg3_p = dut.vdc.ioreg3_p;
 
   ctl.vdc.row = dut.vdc.row;
   ctl.vdc.col = dut.vdc.col;

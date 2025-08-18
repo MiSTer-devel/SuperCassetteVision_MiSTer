@@ -87,8 +87,8 @@ Internal ROM
 . Not accessible from CPU -- CPU ROM has its own copy
 
 
-Registers
----------
+Control registers
+-----------------
 
 R0 ($3400)
 . bit 0: enable bitmap

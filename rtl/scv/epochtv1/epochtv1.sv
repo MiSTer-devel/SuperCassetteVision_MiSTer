@@ -110,11 +110,17 @@ wire         spr_vram_re_p;
 wire         sofp_ce;
 
 //////////////////////////////////////////////////////////////////////
-// MMIO registers ($1400-$1403)
+// Control registers ($1400-$1403)
 
-reg [7:0]    ioreg0, ioreg1, ioreg2, ioreg3;
+reg [7:0]    ioreg0_p, ioreg1_p, ioreg2_p, ioreg3_p; // shadow registers
+reg [7:0]    ioreg0, ioreg1, ioreg2, ioreg3; // active registers
 
 initial begin
+  ioreg0_p = 0;
+  ioreg1_p = 0;
+  ioreg2_p = 0;
+  ioreg3_p = 0;
+
   ioreg0 = 0;
   ioreg1 = 0;
   ioreg2 = 0;
@@ -124,11 +130,21 @@ end
 always @(posedge CLK) begin
   if (cpu_sel_reg & cpu_wr) begin
     case (A[1:0])
-      2'd0: ioreg0 <= DB_I;
-      2'd1: ioreg1 <= DB_I;
-      2'd2: ioreg2 <= DB_I;
-      2'd3: ioreg3 <= DB_I;
+      2'd0: ioreg0_p <= DB_I;
+      2'd1: ioreg1_p <= DB_I;
+      2'd2: ioreg2_p <= DB_I;
+      2'd3: ioreg3_p <= DB_I;
     endcase
+  end
+end
+
+// Copy from shadow to active registers at start of VSYNC.
+always_ff @(posedge CLK) if (CE) begin
+  if ((row == FIRST_ROW_VSYNC) & (col == 0)) begin
+    ioreg0 <= ioreg0_p;
+    ioreg1 <= ioreg1_p;
+    ioreg2 <= ioreg2_p;
+    ioreg3 <= ioreg3_p;
   end
 end
 
