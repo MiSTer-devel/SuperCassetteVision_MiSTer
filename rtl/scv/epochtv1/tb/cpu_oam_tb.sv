@@ -1,7 +1,7 @@
 // Epoch TV-1 testbench: CPU accesses OAM during render
 //
-// OAM RAM is copied to a shadow copy RAM during VSYNC.  CPU accesses
-// have no effect on rendering.
+// OAM RAM is copied from shadow to active RAM during VSYNC.  CPU
+// accesses target shadow RAM and have no effect on rendering.
 //
 // Copyright (c) 2024 David Hunter
 //

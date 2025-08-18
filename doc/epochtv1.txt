@@ -70,13 +70,13 @@ Public internal RAM
 . Directly addressable from CPU ($3000-$33FF)
 . Address map:
   000-1FF (512B) background (Character / graphics bitmap)
-  200-3FF (512B) sprite attributes (main copy)
+  200-3FF (512B) sprite attributes (shadow)
 
 
 Private internal RAM
 --------------------
 . Not addressable from CPU
-. (512B) Shadow copy of sprite attributes
+. (512B) Sprite attributes (active)
 . (4 rows x 208[?] cols x 4 bits) sprite render buffer
   . Dual-port access: 2 rows rendered while other 2 rows output
 
@@ -115,9 +115,9 @@ R3 ($3403)
 
 Registers are write-only; reads yield 0xFF.
 
-All registers are copied into shadow registers, so that changes are
-not observed mid-frame.  The copy occurs at the start of VSYNC (row
-257).
+All registers are copied from shadow to active registers, so that
+changes are not observed mid-frame.  The copy occurs at the start of
+VSYNC (row 257).
 
 
 CPU memory bus
@@ -231,13 +231,13 @@ Sprite @ (sx, sy) draws at render coord. (sx*2 - 23, sy*2 - 14)
 [TODO: Lots of details, double/half-wide/high, 2-color, etc.]
 
 
-  Shadow copy RAM
-  ---------------
+  Shadow / active RAM
+  -------------------
 
-  Sprite attributes are copied from the main copy (CPU-addressable)
-  RAM to the shadow copy RAM, during rows 257-262.  Setting register
-  R0 bit 3 disables the copy, making it safe for the CPU to access
-  attribute RAM.
+  Sprite attributes are copied from the shadow (CPU-addressable) RAM
+  to the active RAM, during rows 257-262.  Setting register R0 bit 3
+  disables the copy, making it safe for the CPU to access attribute
+  RAM.
 
   During the copy (R0.3 = 0), CPU access to main copy RAM is unreliable:
   . rows 257.5 - 258.5: writes maybe ignored
@@ -376,7 +376,7 @@ Sprites are evaluated in order from lowest to highest priority
 the current 2-row.  A visible sprite is rendered immediately following
 evaluation of that sprite.
 
-Evaluation reads sprite attributes from the shadow copy RAM.
+Evaluation reads sprite attributes from the active RAM.
 
 Evaluation and rendering algorithm:
 
@@ -385,7 +385,7 @@ Evaluation and rendering algorithm:
 
     for idx in 0 .. 127:
         # Evaluate
-        sa = shadow_sprite_attr[idx]
+        sa = sprite_attr[idx]
         if is_spr_in_range(sa) and sa.color != 0:
             # Update start line
             sa.start_line += 1

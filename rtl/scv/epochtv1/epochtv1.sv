@@ -270,7 +270,7 @@ end
 
 
 //////////////////////////////////////////////////////////////////////
-// Sprite attribute memory (OAM)
+// Sprite attribute memory, shadow (OAM)
 
 reg [31:0] oam [128];
 
@@ -296,7 +296,7 @@ end
 
 
 //////////////////////////////////////////////////////////////////////
-// Sprite attribute memory copy (OAM2)
+// Sprite attribute memory, active (OAM2)
 
 reg [31:0] oam2 [128];
 
@@ -328,7 +328,7 @@ end
 //////////////////////////////////////////////////////////////////////
 // OAM copier
 //
-// Copies OAM into its shadow copy. Copy starts in VBL and runs to
+// Copies OAM from shadow to active. Copy starts in VBL and runs to
 // completion.
 
 reg [6:0] boc_idx;
