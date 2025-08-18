@@ -169,6 +169,6 @@ endtask
 task dut_ctl_init(input string vram_path);
   load_chr("epochtv.chr");
   load_rams(vram_path);
-  dut.vdc.row = dut.vdc.FIRST_ROW_BOC_START - 1;
+  dut.vdc.row = dut.vdc.FIRST_ROW_VSYNC - 1;
   copy_to_ctl();
 endtask

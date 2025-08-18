@@ -71,9 +71,6 @@ localparam [8:0] LAST_ROW_VSYNC = 9'd259;
 localparam [8:0] FIRST_COL_HSYNC = 9'd240;
 localparam [8:0] LAST_COL_HSYNC = 9'd259;
 
-localparam [8:0] FIRST_ROW_PRE_RENDER = FIRST_ROW_RENDER - 'd2;
-localparam [8:0] FIRST_ROW_BOC_START = FIRST_ROW_VSYNC;
-
 `ifdef EPOCHTV1_HIDE_OVERSCAN
 // Visible window: 204 x 230 = (1,2)-(204,231)
 //
@@ -102,7 +99,6 @@ localparam [8:0] LAST_COL_RIGHT = LAST_COL_VISIBLE + 1'd8;
 
 reg          ce2;
 reg [8:0]    row_p, col_p, row, col;
-wire         pre_render_row;
 wire         render_row, render_col, render_px;
 wire         visible_row, visible_col, visible_px;
 wire         cpu_sel_bgm, cpu_sel_oam, cpu_sel_vram, cpu_sel_reg, cpu_sel_apu;
@@ -357,7 +353,7 @@ end
 
 always_ff @(posedge CLK) if (CE) begin
   if (~boc_active) begin
-    if ((row == FIRST_ROW_BOC_START) & (col == 0)) begin
+    if ((row == FIRST_ROW_VSYNC) & (col == 0)) begin
       boc_active <= '1;
       boc_idx <= 0;
     end
@@ -1005,8 +1001,6 @@ always @* begin
     pd = |sofp_px ? sofp_px : bgr_px;
   end
 end
-
-assign pre_render_row = (row >= FIRST_ROW_PRE_RENDER) & (row < FIRST_ROW_RENDER);
 
 assign render_row = (row >= FIRST_ROW_RENDER) & (row <= LAST_ROW_RENDER);
 assign render_col = (col >= FIRST_COL_RENDER) & (col <= LAST_COL_RENDER);

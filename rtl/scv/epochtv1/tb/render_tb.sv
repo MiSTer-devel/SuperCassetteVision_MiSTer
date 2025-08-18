@@ -214,7 +214,7 @@ always @(init_regs) begin
 end
 
 initial #0 begin
-  dut.row = dut.FIRST_ROW_BOC_START - 1;
+  dut.row = dut.FIRST_ROW_VSYNC - 1;
 
   load_chr("epochtv.chr");
   load_rams("vid-spr3-0-vram.bin");
