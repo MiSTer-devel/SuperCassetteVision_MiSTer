@@ -113,7 +113,6 @@ wire         sofp_ce;
 // MMIO registers ($1400-$1403)
 
 reg [7:0]    ioreg0, ioreg1, ioreg2, ioreg3;
-reg [7:0]    ioreg_do;
 
 initial begin
   ioreg0 = 0;
@@ -131,17 +130,6 @@ always @(posedge CLK) begin
       2'd3: ioreg3 <= DB_I;
     endcase
   end
-end
-
-always @* begin
-  ioreg_do = 8'hxx;
-  case (A[1:0])
-    2'd0: ioreg_do = ioreg0;
-    2'd1: ioreg_do = ioreg1;
-    2'd2: ioreg_do = ioreg2;
-    2'd3: ioreg_do = ioreg3;
-    default: ;
-  endcase
 end
 
 // Handy aliases
@@ -409,7 +397,7 @@ always_ff @(posedge CLK) if (CE) begin
     else if (cpu_sel_oam)
       cpu_do <= oam_rbuf[(A[1:0]*8)+:8];
     else if (cpu_sel_reg)
-      cpu_do <= ioreg_do;
+      cpu_do <= 8'hFF;
   end
 end
 

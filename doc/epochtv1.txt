@@ -113,7 +113,7 @@ R3 ($3403)
 . bits 3-0: char. BG color
 
 
-Registers are write-only.
+Registers are write-only; reads yield 0xFF.
 
 All registers are copied into shadow registers, so that changes are
 not observed mid-frame.  The copy occurs at the start of VSYNC (row
