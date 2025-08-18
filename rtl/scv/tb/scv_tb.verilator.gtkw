@@ -63,14 +63,12 @@ TOP.scv_tb.dut.cpu.INT1
 -vdc
 @28
 TOP.scv_tb.dut.vdc.CE
-TOP.scv_tb.dut.vdc.field
 @24
 TOP.scv_tb.dut.vdc.row[8:0]
 TOP.scv_tb.dut.vdc.col[8:0]
 @28
 TOP.scv_tb.dut.vdc.VBL
-TOP.scv_tb.dut.vdc.nVAWR
-TOP.scv_tb.dut.vdc.nVBWR
+TOP.scv_tb.dut.vdc.nVWE
 @c00200
 -cpu bus
 @22
@@ -81,7 +79,8 @@ TOP.scv_tb.dut.vdc.DB_O[7:0]
 TOP.scv_tb.dut.vdc.RDB
 TOP.scv_tb.dut.vdc.WRB
 TOP.scv_tb.dut.vdc.CSB
-@1401200
+TOP.scv_tb.dut.vdc.WAITB
+@1000200
 -cpu bus
 @c00200
 -ioreg
@@ -117,9 +116,7 @@ TOP.scv_tb.dut.vdc.bgr_ch_fgc[3:0]
 TOP.scv_tb.dut.vdc.bgr_ch_pat[7:0]
 TOP.scv_tb.dut.vdc.bgr_bgc[3:0]
 TOP.scv_tb.dut.vdc.bgr_fgc[3:0]
-TOP.scv_tb.dut.vdc.bgr_px[7:0]
-TOP.scv_tb.dut.vdc.bgr_wa[4:0]
-TOP.scv_tb.dut.vdc.bgr_we[7:0]
+TOP.scv_tb.dut.vdc.bgr_px[3:0]
 @1401200
 -bgr
 @c00200
