@@ -62,6 +62,7 @@ External VRAM
 . \VCS always select one chip
 . contents: sprite patterns
 . Bus cycle time: (7 / 14.318181) us = 2p
+. Bus cycle phase: start of odd columns + 3q
 
 
 Public internal RAM
@@ -130,9 +131,12 @@ The TV-1 decodes address and drives chip select for uPD1771C. The
 address decode appears to be combinatorial logic -- glitches are
 evident on chip select.
 
-Probing the SCV reveals that the TV-1 asserts \WAIT when accessed,
-extending T2 by one T-cycle. This includes uPD1771C accesses (for
-which the TV-1 decodes address).
+Probing the SCV reveals that the TV-1 asserts \WAIT for a minimum of
+one VRAM bus cycle when accessed, extending T2 by one T-cycle. This
+includes uPD1771C accesses (for which the TV-1 decodes address).
+\WAIT assertion is aligned to chip select, and de-assertion is aligned
+to the VRAM bus cycle.  \WAIT will also briefly assert again
+immediately after the access, when A15 goes back high.
 
 
 Screen size
@@ -396,6 +400,11 @@ Each step takes a fixed number of VRAM bus cycles:
   Evaluate: 1 cycle
   Render: 1 + (width in pixels / 4) cycles
 
+If sprite idx 0 is visible, then the VRAM address bus will output its
+first pattern address in column 1, and the next address (A0 toggles)
+in column 5.  This implies that sprite evaluation of sprite idx 0
+begins in column 259.
+
 Sprite width includes modifications by attribute flags that double
 (link) and halve the sprite.  For example, a half-width sprite only
 takes 3 render cycles.
@@ -414,7 +423,9 @@ decreases (fewer rendered) as the visible sprites are moved down
 only partially rendered, dropping 1-3 nibbles (4-12px) from the right.
 
 CPU accesses to VRAM do not affect evalation or rendering timing.  The
-CPU access replaces the intended sprite render access.  The sprite
+CPU access takes over the VRAM bus for an integer number of VRAM bus
+cycles, for as long as (CPU bus) A15 is low, less address decoding.
+The CPU access replaces the intended sprite render access.  The sprite
 pattern data seen by rendering is replaced by 0 (transparent).  Dragon
 Ball shows this effect near the top of the screen, most notably on the
 edges of the scrolling land.

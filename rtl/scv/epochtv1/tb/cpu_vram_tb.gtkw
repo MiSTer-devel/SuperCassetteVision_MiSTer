@@ -1,0 +1,95 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Sun Aug 17 23:00:33 2025
+[*]
+[dumpfile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/cpu_vram_tb.vcd"
+[dumpfile_mtime] "Sun Aug 17 22:53:05 2025"
+[dumpfile_size] 465913260
+[savefile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/cpu_vram_tb.gtkw"
+[timestart] 464790000
+[size] 1288 649
+[pos] -1 -1
+*-20.626644 467858160 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+[markername] AA
+[markername] BB
+[markername] CC
+[markername] DD
+[markername] EE
+[markername] FF
+[markername] GG
+[markername] HH
+[markername] II
+[markername] JJ
+[markername] KK
+[markername] LL
+[markername] MM
+[markername] NN
+[markername] OO
+[markername] PP
+[markername] QQ
+[markername] RR
+[markername] SS
+[markername] TT
+[markername] UU
+[markername] VV
+[markername] WW
+[markername] XX
+[markername] YY
+[markername] ZZ
+[treeopen] cpu_vram_tb.
+[treeopen] cpu_vram_tb.ctl.
+[treeopen] cpu_vram_tb.dut.
+[sst_width] 292
+[signals_width] 222
+[sst_expanded] 1
+[sst_vpaned_height] 169
+@28
+cpu_vram_tb.dut.vdc.CE
+cpu_vram_tb.dut.vdc.sofp_ce
+cpu_vram_tb.dut.vdc.VBL
+@24
+cpu_vram_tb.dut.vdc.row[8:0]
+cpu_vram_tb.dut.vdc.col[8:0]
+@22
+cpu_vram_tb.dut.vdc.A[12:0]
+@28
+cpu_vram_tb.dut.vdc.CSB
+cpu_vram_tb.dut.vdc.RDB
+cpu_vram_tb.dut.vdc.WRB
+cpu_vram_tb.dut.vdc.WAITB
+@22
+cpu_vram_tb.dut.vdc.DB_I[7:0]
+@28
+cpu_vram_tb.dut.vdc.DB_OE
+@22
+cpu_vram_tb.dut.vdc.DB_O[7:0]
+@28
+cpu_vram_tb.dut.vdc.cpu_sel_vram
+cpu_vram_tb.dut.vdc.vram_sel_cpu
+@c00028
+cpu_vram_tb.dut.vdc.nVCS[1:0]
+@28
+(0)cpu_vram_tb.dut.vdc.nVCS[1:0]
+(1)cpu_vram_tb.dut.vdc.nVCS[1:0]
+@1401200
+-group_end
+@22
+cpu_vram_tb.dut.vdc.VA[10:0]
+cpu_vram_tb.dut.vdc.VD_I[7:0]
+@23
+cpu_vram_tb.dut.vdc.VD_O[7:0]
+@28
+cpu_vram_tb.dut.vdc.nVWE
+@22
+cpu_vram_tb.dut.vdc.RGB[23:0]
+@200
+-ctl
+@22
+cpu_vram_tb.ctl.vdc.VA[10:0]
+cpu_vram_tb.ctl.vdc.VD_I[7:0]
+cpu_vram_tb.ctl.vdc.RGB[23:0]
+@28
+cpu_vram_tb.ctl.vdc.HS
+cpu_vram_tb.ctl.vdc.sofp_st[2:0]
+[pattern_trace] 1
+[pattern_trace] 0

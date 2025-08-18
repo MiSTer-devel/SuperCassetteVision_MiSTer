@@ -15,6 +15,7 @@ module vdc_vram
    input         rdb,
    input         wrb,
    input         csb,
+   output        waitb,
 
    output        de,
    output        hs,
@@ -41,6 +42,7 @@ epochtv1 vdc
    .RDB(rdb),
    .WRB(wrb),
    .CSB(csb),
+   .WAITB(waitb),
 
    .VA(va),
    .VD_I(vd_i),

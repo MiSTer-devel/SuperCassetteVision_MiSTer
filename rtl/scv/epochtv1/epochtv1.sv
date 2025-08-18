@@ -72,7 +72,7 @@ localparam [8:0] FIRST_COL_HSYNC = 9'd240;
 localparam [8:0] LAST_COL_HSYNC = 9'd259;
 
 localparam [8:0] FIRST_ROW_PRE_RENDER = FIRST_ROW_RENDER - 'd2;
-localparam [8:0] FIRST_ROW_BOC_START = LAST_ROW_RENDER + 'd2;
+localparam [8:0] FIRST_ROW_BOC_START = FIRST_ROW_VSYNC;
 
 `ifdef EPOCHTV1_HIDE_OVERSCAN
 // Visible window: 204 x 230 = (1,2)-(204,231)
@@ -100,17 +100,18 @@ localparam [8:0] LAST_COL_RIGHT = LAST_COL_VISIBLE + 1'd8;
 `endif
 
 
-reg [8:0]    row, col;
-reg          field;
+reg          ce2;
+reg [8:0]    row_p, col_p, row, col;
 wire         pre_render_row;
 wire         render_row, render_col, render_px;
 wire         visible_row, visible_col, visible_px;
 wire         cpu_sel_bgm, cpu_sel_oam, cpu_sel_vram, cpu_sel_reg, cpu_sel_apu;
 wire         cpu_rd, cpu_wr, cpu_rdwr;
+wire         vram_ce;
 reg [11:0]   spr_vram_addr;
+reg [7:0]    spr_vram_data;
 wire         spr_vram_re_p;
 wire         sofp_ce;
-wire         sofp_stall;
 
 //////////////////////////////////////////////////////////////////////
 // MMIO registers ($1400-$1403)
@@ -171,28 +172,48 @@ wire [3:0]   ch_clr_fg = ioreg3[7:4];
 
 
 //////////////////////////////////////////////////////////////////////
+// Internal clock generator
+
+// Synthesize a second phase of the pixel clock.  Phase doesn't matter
+// for our purposes.
+
+initial
+  ce2 = 0;
+
+always @(posedge CLK) begin
+  ce2 <= CE;
+end
+
+
+//////////////////////////////////////////////////////////////////////
 // Video counter
 
 initial begin
   row = 0;
   col = 0;
-  field = 0;
 end
 
-always_ff @(posedge CLK) if (CE) begin
+always_comb begin
+  row_p = row;
+  col_p = col;
+
   if (col == NUM_COLS - 1'd1) begin
-    col <= 0;
+    col_p = 0;
     if (row == NUM_ROWS - 1'd1) begin
-      row <= 0;
-      field <= ~field;
+      row_p = 0;
     end
     else begin
-      row <= row + 1'd1;
+      row_p = row_p + 1'd1;
     end
   end
   else begin
-    col <= col + 1'd1;
+    col_p = col_p + 1'd1;
   end
+end
+
+always_ff @(posedge CLK) if (CE) begin
+  row <= row_p;
+  col <= col_p;
 end
 
 
@@ -217,19 +238,35 @@ end
 
 //////////////////////////////////////////////////////////////////////
 // Background memory (BGM)
+//
+// Separate ports for BGR and CPU allow both processes to access BGM
+// in the same pixel clock cycle.
 
 reg [31:0] bgm [128];
 
-wire [6:0] bgm_a;
-wire       bgm_a_sel_cpu;
-wire [6:0] bgm_ra;
-reg [31:0] bgm_rbuf;
-wire [3:0] bgm_we;
+wire       bgm_sel_cpu;
+reg        bgm_sel_cpu_d;
+reg [6:0]  bgm_a;
+wire [6:0] bgm_ra_bgr, bgm_a_cpu;
+reg [31:0] bgm_rbuf, bgm_rbuf_bgr, bgm_rbuf_cpu;
+reg [3:0]  bgm_we;
+wire [3:0] bgm_we_cpu;
 wire [31:0] bgm_wbuf;
 
-assign bgm_a = bgm_a_sel_cpu ? A[8:2] : bgm_ra;
-assign bgm_wbuf = {4{DB_I}};
-assign bgm_we = {3'b0, (cpu_sel_bgm & cpu_wr)} << A[1:0];
+always_ff @(posedge CLK) begin
+  bgm_sel_cpu_d <= bgm_sel_cpu;
+end
+
+always @* begin
+  if (bgm_sel_cpu) begin
+    bgm_a = bgm_a_cpu;
+    bgm_we = bgm_we_cpu;
+  end
+  else begin
+    bgm_a = bgm_ra_bgr;
+    bgm_we = '0;
+  end
+end
 
 always_ff @(posedge CLK) begin
   bgm_rbuf <= bgm[bgm_a];
@@ -240,23 +277,11 @@ always_ff @(posedge CLK) begin
   end
 end
 
-
-//////////////////////////////////////////////////////////////////////
-// Background memory copy (BGM2)
-
-reg [31:0] bgm2 [128];
-
-wire [6:0] bgm2_ra;
-reg [31:0] bgm2_rbuf;
-wire [6:0] bgm2_wa;
-wire       bgm2_we;
-wire [31:0] bgm2_wbuf;
-
 always_ff @(posedge CLK) begin
-  bgm2_rbuf <= bgm2[bgm2_ra];
-  if (bgm2_we) begin
-    bgm2[bgm2_wa] <= bgm2_wbuf;
-  end
+  if (bgm_sel_cpu_d)
+    bgm_rbuf_cpu <= bgm_rbuf;
+  else
+    bgm_rbuf_bgr <= bgm_rbuf;
 end
 
 
@@ -317,30 +342,18 @@ end
 
 
 //////////////////////////////////////////////////////////////////////
-// BGM / OAM copier
+// OAM copier
 //
-// Copies each memory into its respective memory copy. Copy starts in
-// VBL, runs to completion, and stalls on CPU access to memory.
-
-// TODO: Don't copy BGM
+// Copies OAM into its shadow copy. Copy starts in VBL and runs to
+// completion.
 
 reg [6:0] boc_idx;
 reg       boc_active;
-wire      boc_stall, boc_stall_pre;
-reg       boc_stall_d;
 wire      boc_we;
 
 initial begin
   boc_active = 0;
 end
-
-// boc_stall deassertion needs to lag cpu_rdwr deassertion by 1x CE,
-// to give memories a chance to recover.
-assign boc_stall_pre = (cpu_sel_bgm | cpu_sel_oam) & cpu_rdwr;
-always_ff @(posedge CLK) if (CE) begin
-  boc_stall_d <= boc_stall_pre;
-end
-assign boc_stall = boc_stall_pre | boc_stall_d;
 
 always_ff @(posedge CLK) if (CE) begin
   if (~boc_active) begin
@@ -349,7 +362,7 @@ always_ff @(posedge CLK) if (CE) begin
       boc_idx <= 0;
     end
   end
-  else if (~boc_stall) begin
+  else begin
     if (boc_idx == '1) begin
       boc_active <= 0;
     end
@@ -359,12 +372,7 @@ always_ff @(posedge CLK) if (CE) begin
   end
 end
 
-assign boc_we = CE & boc_active & ~boc_stall;
-
-assign bgm_ra = boc_idx;
-assign bgm2_wbuf = bgm_rbuf;
-assign bgm2_wa = boc_idx;
-assign bgm2_we = boc_we;
+assign boc_we = CE & boc_active;
 
 assign oam_ra = boc_idx;
 assign oam2_wpsel = ~boc_active;
@@ -378,7 +386,12 @@ assign oam2_we1 = boc_we;
 
 reg [7:0] cpu_do;
 reg       cpu_csb_d;
-reg       cpu_waitb_p;
+reg       cpu_sel;
+
+always_ff @(posedge CLK) if (vram_ce) begin
+  cpu_csb_d <= CSB;
+  cpu_sel <= (cpu_sel | ~cpu_csb_d) & ~CSB;
+end
 
 // Address decoder
 assign cpu_sel_vram = ~CSB & (A[12] == 1'b0);     // $0000 - $0FFF
@@ -391,18 +404,12 @@ assign cpu_rd = ~(CSB | RDB);
 assign cpu_wr = ~(CSB | WRB);
 assign cpu_rdwr = cpu_rd | cpu_wr;
 
-always @(posedge CLK) if (CP1_POSEDGE) begin
-  cpu_csb_d <= CSB;
-  cpu_waitb_p <= CSB | cpu_rdwr;
-end
-wire cpu_csb_negedge = ~CSB & cpu_csb_d;
-
 always_ff @(posedge CLK) if (CE) begin
   if (cpu_rd) begin
     if (cpu_sel_vram)
       cpu_do <= VD_I;
     else if (cpu_sel_bgm)
-      cpu_do <= bgm_rbuf[(A[1:0]*8)+:8];
+      cpu_do <= bgm_rbuf_cpu[(A[1:0]*8)+:8];
     else if (cpu_sel_oam)
       cpu_do <= oam_rbuf[(A[1:0]*8)+:8];
     else if (cpu_sel_reg)
@@ -413,22 +420,46 @@ end
 assign DB_O = DB_OE ? cpu_do : 8'hzz;
 assign DB_OE = cpu_rd;
 assign SCPUB = ~cpu_sel_apu;
-assign WAITB = ~cpu_csb_negedge & cpu_waitb_p;
+// This seems to reproduce WAITB's behavior of asserting on CSB and de-asserting on VRAM bus cycle.
+assign WAITB = CSB ^ cpu_sel;
 
-assign bgm_a_sel_cpu = cpu_sel_bgm & cpu_rdwr;
+assign bgm_sel_cpu = cpu_sel_bgm & cpu_rdwr & ce2;
+assign bgm_a_cpu = A[8:2];
+assign bgm_we_cpu = {3'b0, cpu_wr} << A[1:0];
+assign bgm_wbuf = {4{DB_I}};
+
 assign oam_a_sel_cpu = cpu_sel_oam & cpu_rdwr;
 
 
 //////////////////////////////////////////////////////////////////////
 // VRAM address / data bus interface
 
-reg [11:0] va;
+wire [11:0] va;
+reg [11:0]  vram_cpu_addr;
+reg [7:0]   vram_cpu_data;
+reg         vram_cpu_sel_vram_d;
+reg         vram_wr;
 
-assign va = (cpu_sel_vram & cpu_rdwr) ? A[11:0] : spr_vram_addr;
+// VRAM bus cycle rate is 1/2 pixel clock, phase is odd columns (output)
+assign vram_ce = CE & col[0];
+
+always @(posedge CLK) if (vram_ce) begin
+  vram_cpu_sel_vram_d <= cpu_sel_vram;
+  vram_cpu_addr <= A[11:0];
+  vram_cpu_data <= DB_I;
+  vram_wr <= cpu_wr;
+end
+
+wire vram_sel_cpu = cpu_sel & vram_cpu_sel_vram_d;
+
+assign va = vram_sel_cpu ? vram_cpu_addr : spr_vram_addr;
+
+always @*
+  spr_vram_data = vram_sel_cpu ? '0 : VD_I;
 
 assign VA = va[10:0];
-assign VD_O = DB_I;
-assign nVWE = ~(cpu_sel_vram & cpu_wr);
+assign VD_O = vram_wr ? vram_cpu_data : 8'hzz;
+assign nVWE = ~(vram_sel_cpu & vram_wr);
 assign nVCS[0] = va[11];
 assign nVCS[1] = ~va[11];
 
@@ -469,8 +500,8 @@ assign bgr_bm = bm_ena & ~bgr_ch;
 assign bgr_ch = bgr_xwin & bgr_ywin;
 
 // Read data from BGM
-assign bgm2_ra = {bgr_ty[4:1], bgr_tx[4:2]};
-assign bgr_bgm_rd = bgm2_rbuf[(bgr_tx[1:0]*8)+:8];
+assign bgm_ra_bgr = {bgr_ty[4:1], bgr_tx[4:2]};
+assign bgr_bgm_rd = bgm_rbuf_bgr[(bgr_tx[1:0]*8)+:8];
 
 // Read character pattern from ROM
 assign chr_a = {bgr_bgm_rd[6:0], bgr_row[2:0]};
@@ -572,6 +603,9 @@ reg         spr_dnc;            // drawing nibble (4 px) counter
 reg [7:0]   spr_dsx;            // current drawing column
 reg [3:0]   spr_dclr;           // current sprite color
 
+// TODO: On HW, the VRAM accesses on SST_FETCH and the next cycle have
+// the same address.
+
 initial begin
   spr_vram_re = 0;
   spr_rnc = 0;
@@ -587,7 +621,7 @@ always_ff @(posedge CLK) if (sofp_ce) begin
   if (spr_vram_re_p)
     spr_rnc <= spr_vram_re & ~spr_rnc;
   if (spr_vram_re)
-    spr_pat <= VD_I;
+    spr_pat <= spr_vram_data;
 
   spr_vram_re <= spr_vram_re_p;
   spr_vram_addr_d <= spr_vram_addr;
@@ -668,22 +702,20 @@ always @* begin
 end
 
 always_ff @(posedge CLK) if (sofp_ce) begin
-  if (~sofp_stall) begin
-    spr_dsr <= {spr_dpat, spr_dsr[15:8]};
+  spr_dsr <= {spr_dpat, spr_dsr[15:8]};
 
-    spr_dnc <= spr_rnc;
+  spr_dnc <= spr_rnc;
 
-    spr_dact_d <= spr_dact;
-    if (spr_d0) begin
-      spr_dsx <= spr_oa.x*2;
-      spr_dclr <= spr_color;
-    end
-    else if (spr_dact_d) begin
-      spr_dsx <= spr_dsx + 8'd4;
-    end
-
-    spr_dact_d2 <= spr_dact_d;
+  spr_dact_d <= spr_dact;
+  if (spr_d0) begin
+    spr_dsx <= spr_oa.x*2;
+    spr_dclr <= spr_color;
   end
+  else if (spr_dact_d) begin
+    spr_dsx <= spr_dsx + 8'd4;
+  end
+
+  spr_dact_d2 <= spr_dact_d;
 end
 
 function is_dsr_set(reg [15:0] dsr, int off, reg [1:0] x0, reg y);
@@ -795,8 +827,6 @@ typedef enum reg [2:0]
 
 e_sofp_st sofp_st, sofp_st_next;
 
-wire sofp_stall_pre;
-reg  sofp_stall_d;
 wire sofp_row;
 wire sofp_row_start;
 wire sofp_row_end;
@@ -808,21 +838,13 @@ wire sofp_wsel;
 reg [3:0]  sofp_wdc_bg, sofp_wdc_fg;
 reg [7:0]  sofp_wds;
 
-assign sofp_ce = CE & ~col[0]; // TODO: sync w/ VRAM bus
-
-// sofp_stall deassertion needs to lag cpu_rdwr deassertion by 1x CE,
-// to give memories a chance to recover.
-assign sofp_stall_pre = cpu_sel_vram & cpu_rdwr;
-always_ff @(posedge CLK) if (CE) begin
-  sofp_stall_d <= sofp_stall_pre;
-end
-assign sofp_stall = sofp_stall_pre | sofp_stall_d;
+assign sofp_ce = vram_ce;
 
 assign sofp_oam_idx_max = sp_hide7 ? 7'd63 : 7'd127;
 
-assign sofp_row = (row >= 9'd2) & (row <= 9'd253);
-assign sofp_row_start = sofp_row & (col == 0) & ~row[0];
-assign sofp_row_end = sofp_row & (col >= 9'd241) & row[0];
+assign sofp_row = (row_p >= 9'd2) & (row_p <= 9'd253);
+assign sofp_row_start = sofp_row & (col_p == 0) & ~row_p[0];
+assign sofp_row_end = sofp_row & (col_p >= 9'd241) & row_p[0];
 
 initial begin
   sofp_st = SST_IDLE;
@@ -838,7 +860,7 @@ always @* begin
   else if (sofp_row_start) begin
     sofp_st_next = e_sofp_st'(sp_ena ? SST_EVAL : SST_IDLE);
   end
-  else if (~sofp_stall) begin
+  else begin
     if (sofp_st == SST_IDLE) begin
     end
     else if (sofp_st == SST_EVAL) begin

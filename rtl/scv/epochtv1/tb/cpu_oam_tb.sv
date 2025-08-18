@@ -1,5 +1,8 @@
 // Epoch TV-1 testbench: CPU accesses OAM during render
 //
+// OAM RAM is copied to a shadow copy RAM during VSYNC.  CPU accesses
+// have no effect on rendering.
+//
 // Copyright (c) 2024 David Hunter
 //
 // This program is GPL licensed. See COPYING for the full license.
@@ -9,6 +12,8 @@
 module cpu_oam_tb();
 
 `include "dut_ctl_common.svh"
+
+int loops = 0;
 
 initial begin
   $timeformat(-6, 0, " us", 1);
@@ -24,14 +29,34 @@ reg [8:0] aoff;
 
   cpu_init();
   aoff = 0;
+
+  // Don't overlap with OAM copy
+  while (dut.vdc.row != 0)
+    @(posedge clk) ;
+
   forever begin
     #10 cpu_rd('h1200 + aoff, tmp);
     #10 cpu_wr('h1200 + aoff, tmp);
     aoff += 1;
+    if (aoff == 0)
+      loops += 1;
   end
 end
 
-initial #17000 $finish;
+always @(posedge clk) if (dut_de) begin
+  assert(dut_rgb === ctl_rgb);
+  else begin
+    $fatal(1, "output mismatch");
+  end
+end
+
+initial #17000 begin
+  assert(loops);
+  else begin
+    $fatal(1, "test did not loop");
+  end
+  $finish;
+end
 
 endmodule
 

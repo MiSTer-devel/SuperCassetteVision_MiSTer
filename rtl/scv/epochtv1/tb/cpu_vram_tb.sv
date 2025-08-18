@@ -10,6 +10,8 @@ module cpu_vram_tb();
 
 `include "dut_ctl_common.svh"
 
+int loops = 0;
+
 initial begin
   $timeformat(-6, 0, " us", 1);
 
@@ -25,13 +27,42 @@ reg [11:0] aoff;
   cpu_init();
   aoff = 0;
   forever begin
-    #10 cpu_rd('h0000 + aoff, tmp);
-    #10 cpu_wr('h0000 + aoff, tmp);
+    #3 cpu_rd('h0000 + aoff, tmp);
+    if (aoff[11] == 1'b0) begin
+      assert(dut.vrama.mem[aoff[10:0]] == tmp);
+    end
+    else begin
+      assert(dut.vramb.mem[aoff[10:0]] == tmp);
+    end
+    #5 cpu_wr('h0000 + aoff, tmp);
     aoff += 1;
+    if (aoff == 0)
+      loops += 1;
   end
 end
 
-initial #100000 $finish;
+// Zero control VRAM reads when CPU accesses DUT VRAM.
+always @(posedge clk) begin
+  if (dut.vdc.vram_sel_cpu)
+    force ctl.vdc.VD_I = 0;
+  else
+    release ctl.vdc.VD_I;
+end
+
+always @(posedge clk) if (dut_de) begin
+  assert(dut_rgb === ctl_rgb);
+  else begin
+    $fatal(1, "output mismatch");
+  end
+end
+
+initial #100000 begin
+  assert(loops);
+  else begin
+    $fatal(1, "test did not loop");
+  end
+  $finish;
+end
 
 endmodule
 

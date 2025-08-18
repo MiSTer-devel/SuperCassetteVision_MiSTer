@@ -11,6 +11,7 @@ reg [12:0]  dut_a;
 reg [7:0]   dut_db_i;
 wire [7:0]  dut_db_o;
 reg         dut_rdb, dut_wrb, dut_csb;
+wire        dut_waitb;
 wire        dut_de, ctl_de;
 wire [23:0] dut_rgb, ctl_rgb;
 
@@ -26,6 +27,7 @@ vdc_vram dut
    .rdb(dut_rdb),
    .wrb(dut_wrb),
    .csb(dut_csb),
+   .waitb(dut_waitb),
    .de(dut_de),
    .rgb(dut_rgb)
    );
@@ -39,6 +41,7 @@ vdc_vram ctl
    .rdb(1'b1),
    .wrb(1'b1),
    .csb(1'b1),
+   .waitb(),
    .de(ctl_de),
    .rgb(ctl_rgb)
    );
@@ -125,7 +128,7 @@ endtask
 //////////////////////////////////////////////////////////////////////
 
 task cpu_init;
-  dut_a = 0;
+  dut_a = 'X;
   dut_db_i = 'Z;
   dut_rdb = 1'b1;
   dut_wrb = 1'b1;
@@ -133,42 +136,39 @@ task cpu_init;
 endtask
 
 task cpu_rd(input [12:0] a, output [7:0] d);
-  while (~ce) @(posedge clk) ;
   dut_a = a;
   dut_csb = 1'b0;
-  repeat (14) @(posedge clk) ;
+  #0.5 ;
   dut_rdb = 1'b0;
-  repeat (26) @(posedge clk) ;
+  while (~dut_waitb)
+    #0.5 ;
+  #0.75 ;
   d = dut_db_o;
   dut_rdb = 1'b1;
-  repeat (2) @(posedge clk) ;
+  #0.25 ;
   dut_csb = 1'b1;
+  dut_a = 'X;
 endtask
 
 task cpu_wr(input [12:0] a, input [7:0] d);
-  while (~ce) @(posedge clk) ;
   dut_a = a;
   dut_csb = 1'b0;
-  repeat (14) @(posedge clk) ;
+  #0.5 ;
   dut_wrb = 1'b0;
   dut_db_i = d;
-  repeat (26) @(posedge clk) ;
+  while (~dut_waitb)
+    #0.5 ;
+  #0.75 ;
   dut_wrb = 1'b1;
-  //dut_db_i = 'Z;
-  repeat (2) @(posedge clk) ;
+  dut_db_i = 'Z;
+  #0.25 ;
   dut_csb = 1'b1;
+  dut_a = 'X;
 endtask
 
 task dut_ctl_init(input string vram_path);
   load_chr("epochtv.chr");
   load_rams(vram_path);
-  ctl.vdc.row = dut.vdc.FIRST_ROW_BOC_START - 1;
+  dut.vdc.row = dut.vdc.FIRST_ROW_BOC_START - 1;
   copy_to_ctl();
 endtask
-
-always @(posedge clk) if (dut_de) begin
-  assert(dut_rgb === ctl_rgb);
-  else begin
-    $fatal(1, "output mismatch");
-  end
-end

@@ -44,7 +44,6 @@
 [sst_vpaned_height] 159
 @28
 render_tb.dut.CE
-render_tb.dut.field
 @24
 render_tb.dut.row[8:0]
 render_tb.dut.col[8:0]
