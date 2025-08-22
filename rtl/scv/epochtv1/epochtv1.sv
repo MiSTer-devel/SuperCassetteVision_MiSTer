@@ -572,6 +572,7 @@ typedef struct packed
 
 reg [11:0]  spr_vram_addr_d;
 reg         spr_vram_re;
+wire        spr_rw2;            // reading 2nd half of double-wide
 wire        spr_rl, spr_rr;     // reading left/right half (of 16-px pat.)
 reg         spr_rnc;            // read nibble counter
 
@@ -582,20 +583,20 @@ s_objattr   spr_oa, spr_oawb;
 wire [6:0]  spr_cy;             // current render row
 wire        spr_half_w, spr_half_h;
 wire        spr_dbl_w, spr_dbl_h;
-reg [4:0]   spr_y, spr_w, spr_h;
-wire        spr_2clr;           // 2-color sprite (if link_x/y)
+reg [4:0]   spr_x, spr_y, spr_w, spr_h;
+wire        spr_2clr_en;        // 2-color sprite enable (if link_x/y)
+wire        spr_2clr;           // 2-color sprite enabled and link_x/y
 wire        spr_2halves;        // double-wide or 2-color (actual)
 reg [3:0]   spr_color;
 wire        spr_y_in_range;
 wire        spr_visible;
 
 wire        spr_d0;             // drawing start
+wire        spr_d;              // drawing
 wire        spr_dw2;            // drawing 2nd half of double-wide or 2-color
 wire        spr_dh2;            // drawing bottom half of double-high
-wire        spr_skip_dl, spr_skip_dr; // skip drawing left/right half
-wire        spr_skip_dt, spr_skip_db; // skip drawing top/bottom half
-wire        spr_skip_2clr;            // skip drawing 2nd half of 2-color
-wire        spr_dl, spr_dr;     // drawing left/right half (of 16-px pat.)
+wire        spr_skip_dl;        // skip drawing left half
+wire        spr_skip_dt;        // skip drawing top half
 reg [7:0]   spr_olb_we;
 
 reg         spr_dact;
@@ -617,7 +618,7 @@ end
 always @* begin
   spr_vram_addr = spr_vram_addr_d;
   if (spr_vram_re_p & spr_vram_re)
-    spr_vram_addr = {spr_tile, spr_y[3:1], spr_rr, spr_rnc};
+    spr_vram_addr = {spr_tile, spr_y[3:1], spr_x[3], spr_rnc};
 end
 
 always_ff @(posedge CLK) if (sofp_ce) begin
@@ -636,10 +637,11 @@ assign spr_oa = oam2_rd;
 
 assign spr_half_w = spr_oa.split;
 assign spr_half_h = spr_oa.split & spr_oa.tile[6];
-assign spr_dbl_w = ~(spr_half_w | spr_2clr) & spr_oa.link_x;
-assign spr_dbl_h = ~(spr_half_h | spr_2clr) & spr_oa.link_y;
-assign spr_2clr = sp_2clrm & oam_idx[5];
-assign spr_2halves = spr_dbl_w | (spr_2clr & ~spr_skip_2clr);
+assign spr_dbl_w = ~(spr_half_w | spr_2clr_en) & spr_oa.link_x;
+assign spr_dbl_h = ~(spr_half_h | spr_2clr_en) & spr_oa.link_y;
+assign spr_2clr_en = sp_2clrm & oam_idx[5];
+assign spr_2clr = spr_2clr_en & (spr_oa.link_x | spr_oa.link_y);
+assign spr_2halves = spr_dbl_w | spr_2clr;
 
 assign spr_w = spr_half_w ? 5'd7 : spr_dbl_w ? 5'd31 : 5'd15;
 assign spr_h = spr_half_h ? 5'd7 : spr_dbl_h ? 5'd31 : 5'd15;
@@ -648,17 +650,14 @@ assign spr_y_in_range = row[7:1] == spr_cy;
 assign spr_visible = |spr_oa.color & spr_y_in_range;
 
 assign spr_skip_dl = spr_half_w & spr_oa.link_x;
-assign spr_skip_dr = spr_half_w & ~spr_oa.link_x;
 assign spr_skip_dt = spr_half_h & spr_oa.link_y;
-assign spr_skip_db = spr_half_h & ~spr_oa.link_y;
-assign spr_skip_2clr = spr_2clr & ~(spr_oa.link_x | spr_oa.link_y);
 
 always @* begin
   spr_tile = spr_oa.tile;
-  if (spr_2clr & spr_dw2)
+  if (spr_2clr_en & spr_rw2)
     spr_tile = spr_tile ^ {3'b0, spr_oa.link_x, 2'b0, spr_oa.link_y};
-  else if (~spr_2clr)
-    spr_tile = spr_tile | {3'b0, spr_dw2, 2'b0, spr_dh2};
+  else if (~spr_2clr_en)
+    spr_tile = spr_tile | {3'b0, spr_rw2, 2'b0, spr_dh2};
 end
 
 reg [7:0] spr_2clr_lut [16];
@@ -684,19 +683,29 @@ wire [7:0] spr_2clr_lut_out = spr_2clr_lut[spr_oa.color];
 
 always @* begin
   spr_color = spr_oa.color;
-  if (spr_2clr & spr_dw2)
+  if (spr_2clr_en & spr_dw2)
     spr_color = spr_2clr_lut_out[(oam_idx[6]*4)+:4];
+end
+
+always_comb begin
+  spr_x = 0;
+  if (spr_rnc)
+    spr_x += 4'd4;
+  if (spr_rr | spr_skip_dl)
+    spr_x += 4'd8;
 end
 
 always @* begin
   spr_y = spr_oa.start_line * 2;
+  if (spr_skip_dt)
+    spr_y += 4'd8;
 end
 assign spr_dh2 = spr_y_in_range & spr_dbl_h & spr_y[4];
 
 always @* begin
   spr_dpat = 0;
   spr_dact = 0;
-  if (spr_dl | spr_dr) begin
+  if (spr_d) begin
     spr_dact = 1'b1;
     for (int i = 0; i < 8; i++) begin
       spr_dpat[i] = spr_pat[3'd7 - i[2:0]];
@@ -744,7 +753,7 @@ end
 always @* begin
   spr_oawb = spr_oa;
   spr_oawb.start_line += 1'd1;
-  if (~spr_oawb.link_y & (spr_oawb.start_line > 4'd7))
+  if (spr_oawb.start_line > spr_h[4:1])
     spr_oawb.start_line = 0;
 end
 
@@ -875,27 +884,27 @@ always @* begin
       end
     end
     else if (sofp_st == SST_FETCH) begin
-      sofp_st_next = e_sofp_st'(spr_skip_dl ? SST_DRAW_R : SST_DRAW_L);
+      sofp_st_next = SST_DRAW_L;
     end
     else begin
       if (spr_dnc) begin
-        if ((sofp_st == SST_DRAW_L) & ~spr_skip_dr) begin
+        if ((sofp_st == SST_DRAW_L) & ~spr_half_w) begin
           sofp_st_next = SST_DRAW_R;
         end
         else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R)) &
-                 spr_2clr & ~spr_skip_2clr) begin
+                 spr_2clr) begin
+          // TODO: HW does not exhibit this state. No extra VRAM bus
+          // cycles seen on 2-color sprites. Hide it somehow.
           sofp_st_next = SST_2CLR_FLUSH;
         end
         else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R) |
-                  (sofp_st == SST_2CLR_FLUSH)) &
-                 spr_2halves & ~spr_skip_dl) begin
+                  (sofp_st == SST_2CLR_FLUSH)) & spr_2halves) begin
           sofp_st_next = SST_DRAW_L2;
         end
-        else if (((sofp_st == SST_DRAW_R) | (sofp_st == SST_DRAW_L2)) &
-                 spr_2halves & ~spr_skip_dr) begin
+        else if ((sofp_st == SST_DRAW_L2) & ~spr_half_w) begin
           sofp_st_next = SST_DRAW_R2;
         end
-        else if (spr_dl | spr_dr) begin
+        else if (spr_d) begin
           sofp_st_next = e_sofp_st'((oam_idx < 7'd127) ? SST_EVAL : SST_IDLE);
         end
       end
@@ -915,13 +924,14 @@ always_ff @(posedge CLK) if (sofp_ce) begin
 end
 
 assign spr_vram_re_p = (sofp_st_next >= SST_FETCH);
+assign spr_rw2 = (sofp_st_next == SST_DRAW_L2) | (sofp_st_next == SST_DRAW_R2);
 assign spr_rl = (sofp_st_next == SST_DRAW_L) | (sofp_st_next == SST_DRAW_L2);
 assign spr_rr = (sofp_st_next == SST_DRAW_R) | (sofp_st_next == SST_DRAW_R2);
 
-assign spr_d0 = (~spr_dw2 | spr_2clr) & (spr_dl | (spr_dr & spr_skip_dl)) & ~spr_dnc;
+assign spr_d0 = ((sofp_st == SST_DRAW_L) | (spr_2clr & (sofp_st == SST_DRAW_L2))) &
+                ~spr_dnc;
 assign spr_dw2 = (sofp_st == SST_DRAW_L2) | (sofp_st == SST_DRAW_R2);
-assign spr_dl = (sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_L2);
-assign spr_dr = (sofp_st == SST_DRAW_R) | (sofp_st == SST_DRAW_R2);
+assign spr_d = (sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R) | spr_dw2;
 
 assign sofp_wsel = ~row[1];
 
