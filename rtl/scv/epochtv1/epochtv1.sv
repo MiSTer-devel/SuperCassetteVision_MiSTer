@@ -660,31 +660,26 @@ always @* begin
     spr_tile = spr_tile | {3'b0, spr_rw2, 2'b0, spr_dh2};
 end
 
-reg [7:0] spr_2clr_lut [16];
-initial begin
-  spr_2clr_lut[ 0] = {4'd0,  4'd0 };
-  spr_2clr_lut[ 1] = {4'd1,  4'd15};
-  spr_2clr_lut[ 2] = {4'd8,  4'd12};
-  spr_2clr_lut[ 3] = {4'd11, 4'd13};
-  spr_2clr_lut[ 4] = {4'd2,  4'd10};
-  spr_2clr_lut[ 5] = {4'd3,  4'd11};
-  spr_2clr_lut[ 6] = {4'd10, 4'd8 };
-  spr_2clr_lut[ 7] = {4'd9,  4'd9 };
-  spr_2clr_lut[ 8] = {4'd4,  4'd6 };
-  spr_2clr_lut[ 9] = {4'd5,  4'd7 };
-  spr_2clr_lut[10] = {4'd12, 4'd4 };
-  spr_2clr_lut[11] = {4'd13, 4'd5 };
-  spr_2clr_lut[12] = {4'd6,  4'd2 };
-  spr_2clr_lut[13] = {4'd7,  4'd3 };
-  spr_2clr_lut[14] = {4'd14, 4'd1 };
-  spr_2clr_lut[15] = {4'd15, 4'd1 };
-end
-wire [7:0] spr_2clr_lut_out = spr_2clr_lut[spr_oa.color];
+function [3:0] spr_2clr_gen(reg [3:0] color, reg link_x, reg link_y);
+reg [3:0] out;
+  begin
+    out[0] = color[0];
+    case ({link_y, link_x})
+      2'b00:    out[3:1] = color[3:1];
+      2'b01:    out[3:1] = {color[1], color[3], color[2]};
+      2'b10:    out[3:1] = {color[2], color[1], color[3]};
+      2'b11:    out[3:1] = ~color[3:1];
+      default:  out[3:1] = 'X;
+    endcase
+    spr_2clr_gen = out;
+  end
+endfunction
 
 always @* begin
   spr_color = spr_oa.color;
-  if (spr_2clr_en & spr_dw2)
-    spr_color = spr_2clr_lut_out[(oam_idx[6]*4)+:4];
+  if (spr_2clr_en & spr_dw2) begin
+    spr_color = spr_2clr_gen(spr_color, spr_oa.link_x, spr_oa.link_y);
+  end
 end
 
 always_comb begin
