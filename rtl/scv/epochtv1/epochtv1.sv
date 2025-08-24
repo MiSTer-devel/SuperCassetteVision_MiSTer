@@ -618,7 +618,7 @@ end
 always @* begin
   spr_vram_addr = spr_vram_addr_d;
   if (spr_vram_re_p & spr_vram_re)
-    spr_vram_addr = {spr_tile, spr_y[3:1], spr_x[3], spr_rnc};
+    spr_vram_addr = {spr_tile, spr_y[3:1], spr_x[3:2]};
 end
 
 always_ff @(posedge CLK) if (sofp_ce) begin
@@ -640,7 +640,7 @@ assign spr_half_h = spr_oa.split & spr_oa.tile[6];
 assign spr_dbl_w = ~(spr_half_w | spr_2clr_en) & spr_oa.link_x;
 assign spr_dbl_h = ~(spr_half_h | spr_2clr_en) & spr_oa.link_y;
 assign spr_2clr_en = sp_2clrm & oam_idx[5];
-assign spr_2clr = spr_2clr_en & (spr_oa.link_x | spr_oa.link_y);
+assign spr_2clr = spr_2clr_en & ~spr_half_w & (spr_oa.link_x | spr_oa.link_y);
 assign spr_2halves = spr_dbl_w | spr_2clr;
 
 assign spr_w = spr_half_w ? 5'd7 : spr_dbl_w ? 5'd31 : 5'd15;
