@@ -71,6 +71,9 @@ localparam [8:0] LAST_ROW_VSYNC = 9'd259;
 localparam [8:0] FIRST_COL_HSYNC = 9'd240;
 localparam [8:0] LAST_COL_HSYNC = 9'd259;
 
+localparam [8:0] FIRST_ROW_BOC = 9'd258;
+localparam [8:0] LAST_ROW_BOC = 9'd261;
+
 `ifdef EPOCHTV1_HIDE_OVERSCAN
 // Visible window: 204 x 230 = (1,2)-(204,231)
 //
@@ -153,7 +156,7 @@ end
 wire         bm_ena = ioreg0[0];   // enable bitmap
 wire         bm_lores = ioreg0[1]; // bitmap res: 0=lo, 1=hi
 wire         sp_hide7 = ioreg0[2]; // hide sprites 64-127
-wire         boc_dis = ioreg0_p[3];// disable OAM copy (use shadow)
+wire         boc_dis = ioreg0[3];  // disable OAM copy
 wire         sp_ena = ioreg0[4];   // enable sprites
 wire         sp_2clrm = ioreg0[5]; // 2-color sprite mode
 wire         bm_invx = ioreg0[6];  // invert XMAX effect
@@ -348,20 +351,26 @@ end
 // Copies OAM from shadow to active. Copy starts in VBL and runs to
 // completion.
 
-// TODO: Reduce copy speed to match HW
+// Note: Copy speed does not match HW.  Not that this is in any way
+// verifiable or observable...
 
 reg [6:0] boc_idx;
 reg       boc_active;
+wire      boc_region;
+wire      boc_copy;
 wire      boc_we;
 
 initial begin
   boc_active = 0;
 end
 
+assign boc_region = (row >= FIRST_ROW_BOC) & (row <= LAST_ROW_BOC);
+assign boc_copy = boc_region & ~boc_dis;
+
 always_ff @(posedge CLK) if (CE) begin
   if (~boc_active) begin
-    if ((row == FIRST_ROW_VSYNC) & (col == 0)) begin
-      boc_active <= ~boc_dis;
+    if ((row == FIRST_ROW_BOC) & (col == 0)) begin
+      boc_active <= boc_copy;
       boc_idx <= 0;
     end
   end
@@ -390,6 +399,7 @@ assign oam2_we1 = boc_we;
 reg [7:0] cpu_do;
 reg       cpu_csb_d;
 reg       cpu_sel;
+wire      cpu_sel_oam0;
 
 always_ff @(posedge CLK) if (vram_ce) begin
   cpu_csb_d <= CSB;
@@ -399,9 +409,12 @@ end
 // Address decoder
 assign cpu_sel_vram = ~CSB & (A[12] == 1'b0);     // $0000 - $0FFF
 assign cpu_sel_bgm = ~CSB & (A[12:9] == 4'b1000); // $1000 - $11FF
-assign cpu_sel_oam = ~CSB & (A[12:9] == 4'b1001); // $1200 - $13FF
+assign cpu_sel_oam0 =~CSB & (A[12:9] == 4'b1001); // $1200 - $13FF
 assign cpu_sel_reg = ~CSB & (A[12:9] == 4'b1010); // $1400 - $15FF
 assign cpu_sel_apu = ~CSB & (A[12:9] == 4'b1011); // $1600 - $17FF
+
+// CPU access to OAM is disabled during the shadow copy.
+assign cpu_sel_oam = cpu_sel_oam0 & ~boc_copy;
 
 assign cpu_rd = ~(CSB | RDB);
 assign cpu_wr = ~(CSB | WRB);
@@ -415,7 +428,7 @@ always_ff @(posedge CLK) if (CE) begin
       cpu_do <= bgm_rbuf_cpu[(A[1:0]*8)+:8];
     else if (cpu_sel_oam)
       cpu_do <= oam_rbuf[(A[1:0]*8)+:8];
-    else if (cpu_sel_reg)
+    else
       cpu_do <= 8'hFF;
   end
 end

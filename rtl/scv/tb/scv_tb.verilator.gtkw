@@ -123,6 +123,8 @@ TOP.scv_tb.dut.vdc.bgr_px[3:0]
 -spr
 @22
 TOP.scv_tb.dut.vdc.oam_idx[6:0]
+TOP.scv_tb.dut.vdc.spr_x[4:0]
+TOP.scv_tb.dut.vdc.spr_y[4:0]
 TOP.scv_tb.dut.vdc.spr_oa[31:0]
 TOP.scv_tb.dut.vdc.spr_tile[6:0]
 TOP.scv_tb.dut.vdc.spr_vram_addr[11:0]
@@ -133,8 +135,7 @@ TOP.scv_tb.dut.vdc.spr_dbl_w
 TOP.scv_tb.dut.vdc.spr_dbl_h
 TOP.scv_tb.dut.vdc.spr_2clr
 TOP.scv_tb.dut.vdc.spr_y_in_range
-TOP.scv_tb.dut.vdc.spr_dl
-TOP.scv_tb.dut.vdc.spr_dr
+TOP.scv_tb.dut.vdc.spr_d0
 TOP.scv_tb.dut.vdc.spr_dw2
 TOP.scv_tb.dut.vdc.spr_dh2
 TOP.scv_tb.dut.vdc.spr_dact

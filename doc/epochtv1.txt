@@ -94,7 +94,7 @@ R0 ($3400)
 . bit 0: enable bitmap
 . bit 1: bitmap res.: 0=hi-res, 1=lo-res
 . bit 2: hide sprites 64-127
-. bit 3: enable safe CPU writes to sprite attributes RAM (disable shadow copy)
+. bit 3: enable safe CPU access to sprite attributes RAM (disable shadow copy)
 . bit 4: enable sprites
 . bit 5: 2-color sprite mode
 . bit 6: invert XMAX effect: 1=render char. after XMAX
@@ -235,17 +235,11 @@ Sprite @ (sx, sy) draws at render coord. (sx*2 - 23, sy*2 - 14)
   -------------------
 
   Sprite attributes are copied from the shadow (CPU-addressable) RAM
-  to the active RAM, during rows 257-262.  Setting register R0 bit 3
-  disables the copy, making it safe for the CPU to access attribute
-  RAM.
+  to the active RAM, during rows 258-261.  During the copy, CPU access
+  to shadow RAM is disabled: writes are ignored, and reads yield 0xFF.
 
-  During the copy (R0.3 = 0), CPU access to main copy RAM is unreliable:
-  . rows 257.5 - 258.5: writes maybe ignored
-  . rows 258.5 - 261.5: writes 100% ignored
-  . rows 261.5 - 262:   writes maybe ignored
-  . ? - reads [TODO]
-
-  [TODO: This isn't quite right...]
+  Setting register R0 bit 3 disables the copy, making it safe for the
+  CPU to access attribute RAM.
 
 
 Character patterns
