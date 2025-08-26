@@ -721,20 +721,29 @@ always @* begin
   end
 end
 
-always_ff @(posedge CLK) if (sofp_ce) begin
-  spr_dsr <= {spr_dpat, spr_dsr[15:8]};
+// Sprite drawing runs twice per VRAM fetch.  The pixels fetched from
+// VRAM are drawn to 1 or 2 OLB addresses; which pixels go to which
+// address depends on the sprite's X position.
+// - Cycle 1 (sofp_ce=1): Draw up to 8 pixels to (OLB addr + 0)
+// - Cycle 2 (sofp_ce=0): Draw the remaining 8 pixels to (OLB addr + 1)
 
-  spr_dnc <= spr_rnc;
+always_ff @(posedge CLK) if (CE) begin
+  spr_dsr <= {8'b0, spr_dsr[15:8]};
+  if (sofp_ce)
+    spr_dsr[15:8] <= spr_dpat;
 
-  spr_dact_d <= spr_dact;
-  if (spr_d0) begin
+  if (sofp_ce & spr_d0) begin
     spr_dsx <= spr_oa.x*2;
     spr_dclr <= spr_color;
   end
-  else if (spr_dact_d) begin
+  else if (~sofp_ce & spr_dact_d) begin
     spr_dsx <= spr_dsx + 8'd4;
   end
+end
 
+always_ff @(posedge CLK) if (sofp_ce) begin
+  spr_dnc <= spr_rnc;
+  spr_dact_d <= spr_dact;
   spr_dact_d2 <= spr_dact_d;
 end
 
@@ -782,6 +791,7 @@ reg [7:0]   olb_we;
 wire [6:0]  olb_ra;
 reg [31:0]  olb_rd;
 wire        olb_re;
+wire        olb_rce;
 genvar      olb_gi;
 
 reg [31:0]  olb_rbuf [2];
@@ -814,10 +824,9 @@ generate
       end
       else /*if (olb_ra[6] == olb_gi[0])*/ begin
         // This 2-row is being read from.
-        // TODO: Clear after reading
         addr = olb_ra[5:0];
         wbuf = 0;
-        we = {8{CE & row[0]}}; //XXX
+        we = {8{olb_rce}};
       end
     end
   end
@@ -840,7 +849,6 @@ typedef enum reg [2:0]
  SST_FETCH,
  SST_DRAW_L,
  SST_DRAW_R,
- SST_2CLR_FLUSH,
  SST_DRAW_L2,
  SST_DRAW_R2
 } e_sofp_st;
@@ -900,13 +908,7 @@ always @* begin
           sofp_st_next = SST_DRAW_R;
         end
         else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R)) &
-                 spr_2clr) begin
-          // TODO: HW does not exhibit this state. No extra VRAM bus
-          // cycles seen on 2-color sprites. Hide it somehow.
-          sofp_st_next = SST_2CLR_FLUSH;
-        end
-        else if (((sofp_st == SST_DRAW_L) | (sofp_st == SST_DRAW_R) |
-                  (sofp_st == SST_2CLR_FLUSH)) & spr_2halves) begin
+                 spr_2halves) begin
           sofp_st_next = SST_DRAW_L2;
         end
         else if ((sofp_st == SST_DRAW_L2) & ~spr_half_w) begin
@@ -949,7 +951,7 @@ always @* begin
   sofp_wdc_bg = spr_dclr;
   sofp_wdc_fg = spr_dclr;
   sofp_wds = 0;
-  olb_we = spr_olb_we;
+  olb_we = {8{CE}} & spr_olb_we;
 end
 
 always @* begin
@@ -968,6 +970,7 @@ assign sofp_rx = col[7:0];
 
 assign olb_ra = {sofp_rsel, sofp_rx[7:2]};
 assign olb_re = ~|sofp_rx[1:0];
+assign olb_rce = CE & row[0];   // clear after reading
 
 always_ff @(posedge CLK) if (CE) begin
   sofp_rrs <= {sofp_rx[1:0], row[0]};

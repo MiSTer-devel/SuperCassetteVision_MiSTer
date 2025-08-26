@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Fri Aug 22 00:33:02 2025
+[*] Tue Aug 26 04:34:27 2025
 [*]
 [dumpfile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/render_tb.vcd"
-[dumpfile_mtime] "Fri Aug 22 00:32:36 2025"
-[dumpfile_size] 48649124
+[dumpfile_mtime] "Tue Aug 26 04:25:00 2025"
+[dumpfile_size] 49263276
 [savefile] "/Users/dhunter/src/mister/SuperCassetteVision_MiSTer/rtl/scv/epochtv1/tb/render_tb.gtkw"
-[timestart] 2233410000
+[timestart] 8054400000
 [size] 1288 600
 [pos] -1 -1
-*-22.061314 2242003680 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+*-21.061314 8058697920 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 [markername] AA
 [markername] BB
 [markername] CC
@@ -153,9 +153,7 @@ render_tb.dut.spr_2clr
 render_tb.dut.spr_cy[6:0]
 @28
 render_tb.dut.spr_y_in_range
-@29
 render_tb.dut.spr_d0
-@28
 render_tb.dut.spr_dw2
 render_tb.dut.spr_dh2
 render_tb.dut.spr_dact
@@ -165,8 +163,9 @@ render_tb.dut.spr_dpat[7:0]
 render_tb.dut.spr_dsr[15:0]
 @28
 render_tb.dut.spr_dnc
-@22
+@23
 render_tb.dut.spr_dsx[7:0]
+@22
 render_tb.dut.spr_dclr[3:0]
 @28
 render_tb.dut.spr_dact_d2
@@ -186,6 +185,9 @@ render_tb.dut.olb_re
 -olb
 @800200
 -sofp
+@28
+render_tb.dut.sofp_ce
+render_tb.dut.sofp_row_end
 @24
 render_tb.dut.sofp_st_next[2:0]
 render_tb.dut.sofp_st[2:0]
