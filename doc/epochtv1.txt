@@ -131,12 +131,24 @@ The TV-1 decodes address and drives chip select for uPD1771C. The
 address decode appears to be combinatorial logic -- glitches are
 evident on chip select.
 
-Probing the SCV reveals that the TV-1 asserts \WAIT for a minimum of
-one VRAM bus cycle when accessed, extending T2 by one T-cycle. This
-includes uPD1771C accesses (for which the TV-1 decodes address).
-\WAIT assertion is aligned to chip select, and de-assertion is aligned
-to the VRAM bus cycle.  \WAIT will also briefly assert again
-immediately after the access, when A15 goes back high.
+Probing the SCV reveals that the TV-1 asserts \WAIT for all CPU
+accesses to it, including uPD1771C accesses (for which the TV-1
+decodes address).  \WAIT transition is aligned to the CPU Phi clock
+rising edge.  \WAIT will assert for one or more clock cycles,
+extending T2 (and the total access duration) by one or more T-cycles.
+The number of cycles depends on the address and read/write signals:
+
+- Background RAM read: 3
+- All other reads:     2
+- All writes:          1
+
+If \RD de-asserts in cycle n-2 and remains high in cycle n-1, then
+\WAIT will assert in cycle n (if A15 is low).  This usually coincides
+with T1 of a write cycle following a read.  (Note that the read does
+not have to address the TV-1).  \WAIT then remains asserted in T2 as
+per above, effectively extending \WAIT assertion by one cycle.  But
+because \WAIT assertion has no effect in T1, the total duration of the
+CPU access is unchanged.
 
 
 Screen size

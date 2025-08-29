@@ -397,14 +397,28 @@ assign oam2_we1 = boc_we;
 // CPU address / data bus interface
 
 reg [7:0] cpu_do;
+reg [2:0] cpu_wait_cnt, cpu_wait_cnt_next;
+reg       cpu_waitb, cpu_waitb_next;
 reg       cpu_csb_d;
+reg       cpu_rdb_d;
 reg       cpu_sel;
 wire      cpu_sel_oam0;
+wire      cpu_rdb_posedge;
+
+initial begin
+  cpu_wait_cnt = 0;
+  cpu_waitb = 0;
+end
 
 always_ff @(posedge CLK) if (vram_ce) begin
   cpu_csb_d <= CSB;
   cpu_sel <= (cpu_sel | ~cpu_csb_d) & ~CSB;
 end
+
+always_ff @(posedge CLK) if (CP1_POSEDGE) begin
+  cpu_rdb_d <= RDB;
+end
+assign cpu_rdb_posedge = RDB & ~cpu_rdb_d;
 
 // Address decoder
 assign cpu_sel_vram = ~CSB & (A[12] == 1'b0);     // $0000 - $0FFF
@@ -433,11 +447,52 @@ always_ff @(posedge CLK) if (CE) begin
   end
 end
 
+always_comb begin
+  cpu_wait_cnt_next = cpu_wait_cnt;
+  if (|cpu_wait_cnt) begin
+    cpu_wait_cnt_next = cpu_wait_cnt - 1'd1;
+  end
+  else begin
+    if (~cpu_waitb) begin
+      if (~CSB) begin
+        // WAITB extends BGM reads by 3 cycles, all other reads by 2
+        // cycles, and writes by 1 cycle.
+        if (~RDB)
+          cpu_wait_cnt_next = cpu_sel_bgm ? 3 : 2;
+        else if (~WRB)
+          cpu_wait_cnt_next = 1;
+      end
+    end
+    else /* if (cpu_waitb) */ begin
+      // If RDB de-asserts in cycle n-2 and remains high in cycle n-1,
+      // then WAITB will assert in cycle n (if A15 is low).  This
+      // usually coincides with T1 of a write cycle following a read.
+      if (cpu_rdb_posedge)
+        cpu_wait_cnt_next = 1;
+    end
+  end
+end
+
+wire cpu_wait_cnt_resetting = |cpu_wait_cnt & ~|cpu_wait_cnt_next;
+
+always_comb begin
+  cpu_waitb_next = cpu_waitb;
+  if (cpu_wait_cnt_resetting) begin
+    cpu_waitb_next = ~cpu_waitb;
+  end
+  else if (cpu_waitb & RDB & WRB)
+    cpu_waitb_next = '0;
+end
+
+always_ff @(posedge CLK) if (CP1_POSEDGE) begin
+  cpu_wait_cnt <= cpu_wait_cnt_next;
+  cpu_waitb <= cpu_waitb_next;
+end
+
 assign DB_O = DB_OE ? cpu_do : 8'hzz;
 assign DB_OE = cpu_rd;
 assign SCPUB = ~cpu_sel_apu;
-// This seems to reproduce WAITB's behavior of asserting on CSB and de-asserting on VRAM bus cycle.
-assign WAITB = CSB ^ cpu_sel;
+assign WAITB = CSB | cpu_waitb;
 
 assign bgm_sel_cpu = cpu_sel_bgm & cpu_rdwr & ce2;
 assign bgm_a_cpu = A[8:2];

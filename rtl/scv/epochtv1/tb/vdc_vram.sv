@@ -8,6 +8,7 @@ module vdc_vram
   (
    input         clk,
    input         ce,
+   input         cp1p,
 
    input [12:0]  a,
    input [7:0]   db_i,
@@ -35,6 +36,7 @@ epochtv1 vdc
 
    .CFG_PALETTE('0),
 
+   .CP1_POSEDGE(cp1p),
    .A(a),
    .DB_I(db_i),
    .DB_O(db_o),

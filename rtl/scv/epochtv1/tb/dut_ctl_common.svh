@@ -3,10 +3,14 @@
 // This program is GPL licensed. See COPYING for the full license.
 
 reg         clk, res;
-reg [2:0]   ccnt;
+reg [8:0]   c4cnt, c4cntn;      // 8.0 MHz
+reg [1:0]   ccnt;               // 2.0 MHz
+reg [2:0]   vcnt;
 reg [7:0]   din;
 
 wire        ce;
+wire        cpu4_ce;
+wire        cp1p, cp2p;
 reg [12:0]  dut_a;
 reg [7:0]   dut_db_i;
 wire [7:0]  dut_db_o;
@@ -21,6 +25,7 @@ vdc_vram dut
   (
    .clk(clk),
    .ce(ce),
+   .cp1p(cp1p),
    .a(dut_a),
    .db_i(dut_db_i),
    .db_o(dut_db_o),
@@ -36,6 +41,7 @@ vdc_vram ctl
   (
    .clk(clk),
    .ce(ce),
+   .cp1p(cp1p),
    .a('Z),
    .db_i('Z),
    .rdb(1'b1),
@@ -48,8 +54,13 @@ vdc_vram ctl
 
 //////////////////////////////////////////////////////////////////////
 
+localparam [8:0] CPU4_MUL = 9'd88;
+localparam [8:0] CPU4_DIV = 9'd315;
+
 initial begin
+  c4cnt = 0;
   ccnt = 0;
+  vcnt = 0;
   res = 1;
   clk = 1;
 end
@@ -58,10 +69,18 @@ initial forever begin :ckgen
   #(0.25/14.318181) clk = ~clk; // 2 * 14.318181 MHz
 end
 
-always @(posedge clk)
-  ccnt <= (ccnt == 3'd6) ? 0 : ccnt + 1'd1;
+assign c4cntn = c4cnt + CPU4_MUL;
 
-assign ce = (ccnt == 3'd6);
+always @(posedge clk) begin
+  vcnt <= ce ? 0 : vcnt + 1'd1;
+  c4cnt <= cpu4_ce ? (c4cntn - CPU4_DIV) : c4cntn;
+  ccnt <= cpu4_ce ? ccnt + 1'd1 : ccnt;
+end
+
+assign cpu4_ce = c4cntn >= CPU4_DIV;
+assign cp1p = cpu4_ce & (ccnt == 2'd1);
+assign cp2p = cpu4_ce & (ccnt == 2'd3);
+assign ce = (vcnt == 3'd6);
 
 //////////////////////////////////////////////////////////////////////
 
@@ -136,34 +155,42 @@ task cpu_init;
 endtask
 
 task cpu_rd(input [12:0] a, output [7:0] d);
-  dut_a = a;
-  dut_csb = 1'b0;
-  #0.5 ;
-  dut_rdb = 1'b0;
-  while (~dut_waitb)
-    #0.5 ;
-  #0.75 ;
-  d = dut_db_o;
-  dut_rdb = 1'b1;
-  #0.25 ;
-  dut_csb = 1'b1;
-  dut_a = 'X;
+  while (~cp1p) @(posedge clk) ;
+  dut_a <= a;
+  dut_csb <= 1'b0;
+  while (~cp2p) @(posedge clk) ;
+  dut_rdb <= 1'b0;
+  do begin
+    @(posedge clk) ;
+    while (~cp2p) @(posedge clk) ;
+  end while (~dut_waitb);
+  @(posedge clk) ;
+  while (~cp2p) @(posedge clk) ;
+  d <= dut_db_o;
+  dut_rdb <= 1'b1;
+  while (~cp1p) @(posedge clk) ;
+  dut_csb <= 1'b1;
+  dut_a <= 'X;
 endtask
 
 task cpu_wr(input [12:0] a, input [7:0] d);
-  dut_a = a;
-  dut_csb = 1'b0;
-  #0.5 ;
-  dut_wrb = 1'b0;
-  dut_db_i = d;
-  while (~dut_waitb)
-    #0.5 ;
-  #0.75 ;
-  dut_wrb = 1'b1;
-  dut_db_i = 'Z;
-  #0.25 ;
-  dut_csb = 1'b1;
-  dut_a = 'X;
+  while (~cp1p) @(posedge clk) ;
+  dut_a <= a;
+  dut_csb <= 1'b0;
+  while (~cp2p) @(posedge clk) ;
+  dut_wrb <= 1'b0;
+  dut_db_i <= d;
+  do begin
+    @(posedge clk) ;
+    while (~cp2p) @(posedge clk) ;
+  end while (~dut_waitb);
+  @(posedge clk) ;
+  while (~cp2p) @(posedge clk) ;
+  dut_wrb <= 1'b1;
+  dut_db_i <= 'Z;
+  while (~cp1p) @(posedge clk) ;
+  dut_csb <= 1'b1;
+  dut_a <= 'X;
 endtask
 
 task dut_ctl_init(input string vram_path);
