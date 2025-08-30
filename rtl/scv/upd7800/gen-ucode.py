@@ -131,8 +131,9 @@ def aor_wr_rp():
 # Common nrom operations
 
 nc_idle = {}
-nc_pc_out_inc = {'aout': 1, 'pc_inc': 1}
-nc_load = {'load': 1}
+nc_preload = {'pre_load': 1}
+nc_pc_out_inc = {'aout': 1, 'pc_inc': 1} | nc_preload
+nc_load = {}    # load was replaced by preload in T-1
 nc_store = {'store': 1}         # dor -> DB
 nc_write_db_to_w = {'idbs': 'DB', 'lts': 'RF', 'rfts': 'W'}
 # DB -> idb -> AI, 0 -> BI, AI + BI -> CO
@@ -144,7 +145,7 @@ nc_store_co_to_vw = idb_rd('CO') | idb_wr('DOR') | aor_wr('VW')
 # Pre-populate nrom rows
 nc_row(nc_idle)
 nc_row(nc_pc_out_inc)
-nc_row(nc_load)
+#nc_row(nc_load)
 nc_row(nc_store)
 
 ######################################################################
@@ -170,7 +171,7 @@ def load_wa(ir, nsteps, dst):
     ucs.step(nc_pc_out_inc)
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_w)
-    ucs.step(aor_wr('VW'))
+    ucs.step(aor_wr('VW') | nc_preload)
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr(dst))
     ird_row(ir, nsteps, 1, ucs)
@@ -199,7 +200,7 @@ def load_imm16(ir, nsteps, reg, str_effect=''):
 def loadx(ir, nsteps):
     ucs = ucode_seq(f'LDAX')
 
-    ucs.step(aor_wr_rp())
+    ucs.step(aor_wr_rp() | nc_preload)
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr('A'))
 
@@ -214,7 +215,7 @@ def load_abs(ir, nsteps):
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_co)
     # W -> abl -> aorl, CO -> idb -> abh -> aorh
-    ucs.step({'idbs': 'CO'} | aor_wr('IDB_W'))
+    ucs.step({'idbs': 'CO'} | aor_wr('IDB_W') | nc_preload)
     ucs.step(nc_load)
     # DB -> idb -> r2
     ucs.step(idb_rd('DB') | idb_wr('RF_IR210'))
@@ -233,13 +234,13 @@ def load_ind(ir, nsteps, reg):
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_co)
     # rpal <- (word)
-    ucs.step({'idbs': 'CO'} | aor_wr('IDB_W'))    # {CO, W} -> aor
+    ucs.step({'idbs': 'CO'} | aor_wr('IDB_W') | nc_preload) # {CO, W} -> aor
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr(regl) |
              {'abs': 'AOR'})    # setup for ab_inc
     # rpah <- (word+1)
     # HACK ALERT. I am not proud of this.
-    ucs.step(aor_wr('NABI') | {'ab_inc': 1})      # {CO, W} + 1 -> aor
+    ucs.step(aor_wr('NABI') | nc_preload | {'ab_inc': 1}) # {CO, W} + 1 -> aor
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr(regh))
     ird_row(ir, nsteps, 2, ucs)
@@ -344,24 +345,25 @@ def table(ir, nsteps):
     ucs.step(nc_idle)
     ucs.step(nc_idle)
     # {CO, W} -> aor
-    ucs.step({'idbs': 'CO'} | aor_wr('IDB_W'))
+    ucs.step({'idbs': 'CO'} | aor_wr('IDB_W') | nc_preload)
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr('C') |
              {'abs': 'AOR'})    # setup for ab_inc
     # {CO, W} + 1 -> aor
     # HACK ALERT. I am not proud of this.
-    ucs.step(aor_wr('NABI') | {'ab_inc': 1})
+    ucs.step(aor_wr('NABI') | nc_preload | {'ab_inc': 1})
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr('B'))
     ird_row(ir, nsteps, 0, ucs)
 
 # BLOCK: (DE)+ <- (HL)+, C <- C - 1, repeat until borrow
+# TODO: M2 repeats M1 address, but no R/W; M3 is R; M4 is W.
 def block(ir, nsteps):
     ucs = ucode_seq('BLOCK')
     # HL -> ab -> aor
-    ucs.step(aor_wr('HL'))
+    ucs.step(aor_wr('HL') | {'pre_load': 1})
     # HL + 1 -> HL
-    ucs.step({'abs': 'HL', 'ab_inc': 1, 'abits': 'HL', 'load': 1})
+    ucs.step({'abs': 'HL', 'ab_inc': 1, 'abits': 'HL'})
     # DB -> idb -> W
     ucs.step({'idbs': 'DB', 'rfts': 'W', 'lts': 'RF'})
     # W -> idb -> dor, DE -> ab -> aor
@@ -450,7 +452,7 @@ def math_logic_test(ir, nsteps, op, dst, src, skip=''):
         ucs.step(nc_load)
         ucs.step(nc_write_db_to_w)
         # VW -> ab -> aor
-        ucs.step(aor_wr('VW'))
+        ucs.step(aor_wr('VW') | nc_preload)
         ucs.step(nc_load)
         ucs.step(nc_write_dst_to_ai)
         # Second operand is imm
@@ -465,17 +467,17 @@ def math_logic_test(ir, nsteps, op, dst, src, skip=''):
         ucs.step(nc_pc_out_inc)
         ucs.step(nc_load)
     elif imm:
-        ucs.step(nc_pc_out_inc | nc_write_dst_to_ai)
+        ucs.step(nc_pc_out_inc | nc_write_dst_to_ai | nc_preload)
         ucs.step(nc_load)
     elif ind:
-        ucs.step(aor_wr_rp())
+        ucs.step(aor_wr_rp() | nc_preload)
         ucs.step(nc_load | nc_write_dst_to_ai)
     elif swa:
         ucs.step(nc_pc_out_inc)
         ucs.step(nc_load)
         ucs.step(nc_write_db_to_w)
         # VW -> ab -> aor
-        ucs.step(aor_wr('VW') | nc_write_dst_to_ai)
+        ucs.step(aor_wr('VW') | nc_write_dst_to_ai | nc_preload)
         ucs.step(nc_load)
     else:
         ucs.step(nc_write_dst_to_ai)
@@ -545,7 +547,7 @@ def incdec(ir, nsteps, op, reg):
         ucs.step(nc_load)
         ucs.step(nc_write_db_to_w)
         # VW -> ab -> aor
-        ucs.step(aor_wr('VW'))
+        ucs.step(aor_wr('VW') | nc_preload)
         ucs.step(nc_load)
         reg = 'DB'
     # r2 -> idb -> AI, AI +/- 1 -> CO
@@ -579,7 +581,7 @@ def daa(ir, nsteps):
 # RLD: A[3:0] <- (HL)[7:4] <- (HL)[3:0] <- A[3:0]
 def rld(ir, nsteps, ucname):
     ucs = ucode_seq(ucname)
-    ucs.step(aor_wr('HL'))
+    ucs.step(aor_wr('HL') | nc_preload)
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_w)
     ucs.step(idb_rd('W') | idb_wr('AI') | {'aluop': 'DIS'})
@@ -594,7 +596,7 @@ def rld(ir, nsteps, ucname):
 # RRD: A[3:0] -> (HL)[7:4] -> (HL)[3:0] -> A[3:0]
 def rrd(ir, nsteps, ucname):
     ucs = ucode_seq(ucname)
-    ucs.step(aor_wr('HL'))
+    ucs.step(aor_wr('HL') | nc_preload)
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_w)
     ucs.step(idb_rd('W') | idb_wr('AI') | {'aluop': 'DIH'})
@@ -634,7 +636,7 @@ def jre(ir, nsteps, sign):
     ucs = ucode_seq(f'JRE_{sign}')
     ucs.step(nc_pc_out_inc)
     # PCL -> idb -> AI
-    ucs.step({'rfos': 'PCL', 'idbs': 'RF', 'lts': 'AI', 'load': 1})
+    ucs.step({'rfos': 'PCL', 'idbs': 'RF', 'lts': 'AI'})
     # DB -> idb -> BI, AI + BI -> CO
     ucs.step({'idbs': 'DB', 'lts': 'BI', 'aluop': 'SUM', 'cis': 0})
     # CO -> idb -> PCL
@@ -707,7 +709,7 @@ def calb(ir, nsteps):
 def calf(ir, nsteps):
     ucs = ucode_seq('CALF')
     # SP <- SP-1, PC <- PC+1 (next ins.)
-    ucs.step({'pc_inc': 1})
+    ucs.step({'pc_inc': 1} | nc_preload)
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_w | nc_dec_sp)
     # (SP) <- PCH, SP <- SP-1
@@ -719,7 +721,7 @@ def calf(ir, nsteps):
     ucs.step(nc_store)
     ucs.step({'abs': 'PC', 'ab_dec': 1, 'abits': 'PC'})
     # PCL <- oper., PCH <- {5'b00001, IR[2:0]}
-    ucs.step(aor_wr('PC'))                        # fetch word lo
+    ucs.step(aor_wr('PC') | nc_preload) # fetch word lo
     ucs.step(nc_load | idb_rd('SDG_CALF') | idb_wr('RF_PCH'))
     ucs.step(idb_rd('DB') | idb_wr('RF_PCL'))
 
@@ -742,12 +744,12 @@ def calt(ir, nsteps):
     ucs.step({'idx': 0} | idb_rd('SDG_CALT') | idb_wr('RF_W'))
     # PCL <- (128 + 2ta)
     # W -> abl -> aorl, 0 -> idb -> abh -> aorh
-    ucs.step(idb_rd(0) | aor_wr('IDB_W'))
+    ucs.step(idb_rd(0) | aor_wr('IDB_W') | nc_preload)
     # effective naddr hi. -> idb -> W
     ucs.step(nc_load | {'idx': 1} | idb_rd('SDG_CALT') | idb_wr('RF_W'))
     ucs.step(idb_rd('DB') | idb_wr('RF_PCL'))
     # PCH <- (129 + 2ta)
-    ucs.step(idb_rd(0) | aor_wr('IDB_W'))
+    ucs.step(idb_rd(0) | aor_wr('IDB_W') | nc_preload)
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr('RF_PCH'))
     ird_row(ir, nsteps, 0, ucs)
@@ -783,16 +785,16 @@ def ret(ir, nsteps, ucname):
     ncsk = {'pswsk': 1} if ucname == 'RETS' else {}
     ucs = ucode_seq(ucname)
     # PCL <- (SP), SP <- SP+1
-    ucs.step(aor_wr('SP'))
+    ucs.step(aor_wr('SP') | nc_preload)
     ucs.step(nc_load | nc_inc_sp)
     ucs.step(idb_rd('DB') | idb_wr('PCL'))
     # PCH <- (SP), SP <- SP+1
-    ucs.step(aor_wr('SP'))
+    ucs.step(aor_wr('SP') | nc_preload)
     ucs.step(nc_load | nc_inc_sp)
     ucs.step(idb_rd('DB') | idb_wr('PCH') | ncsk)
     if ucname == 'RETI':
         # PSW <- (SP), SP <- SP+1
-        ucs.step(aor_wr('SP'))
+        ucs.step(aor_wr('SP') | nc_preload)
         ucs.step(nc_load | nc_inc_sp)
         ucs.step(idb_rd('DB') | idb_wr('PSW'))
     ird_row(ir, nsteps, 0, ucs)
@@ -821,11 +823,11 @@ def push16(ir, nsteps, rp):
 def pop16(ir, nsteps, rp):
     ucs = ucode_seq(f'POP_{rp}')
     # rph <- (SP), SP <- SP+1
-    ucs.step(aor_wr('SP') | nc_inc_sp)
+    ucs.step(aor_wr('SP') | nc_inc_sp | nc_preload)
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr(rp[1]))
     # rpl <- (SP), SP <- SP+1
-    ucs.step(aor_wr('SP') | nc_inc_sp)
+    ucs.step(aor_wr('SP') | nc_inc_sp | nc_preload)
     ucs.step(nc_load)
     ucs.step(idb_rd('DB') | idb_wr(rp[0]))
     ird_row(ir, nsteps, 0, ucs)
@@ -846,7 +848,7 @@ def bit(ir, nsteps):
     ucs.step(nc_load)
     ucs.step(nc_write_db_to_w)
     # VW -> ab -> aor
-    ucs.step(aor_wr('VW'))
+    ucs.step(aor_wr('VW') | nc_preload)
     ucs.step(nc_load | idb_rd('SDG_BIT') | idb_wr('BI'))
     ucs.step(idb_rd('DB') | idb_wr('AI') | {'aluop': 'AND'})
     ucs.step({'pswsk': 'NZ'})

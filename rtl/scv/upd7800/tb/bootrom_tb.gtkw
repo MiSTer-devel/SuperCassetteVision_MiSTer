@@ -206,6 +206,7 @@ bootrom_tb.dut.core.cl_one_c
 bootrom_tb.dut.core.cl_ors
 bootrom_tb.dut.core.cl_pc_dec
 bootrom_tb.dut.core.cl_pc_inc
+bootrom_tb.dut.core.cl_pre_load_db
 @22
 bootrom_tb.dut.core.cl_pswsk[3:0]
 bootrom_tb.dut.core.cl_rfos[3:0]

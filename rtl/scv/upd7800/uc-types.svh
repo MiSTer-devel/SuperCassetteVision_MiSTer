@@ -1259,8 +1259,8 @@ typedef struct packed
     reg [0:0] ab_dec;    // decrement ab
     reg [0:0] ab_dec_if_nb;    // decrement ab if no borrow
     reg [0:0] aout;    // ab -> AOR
-    reg [0:0] load;    // assert RDB (read operation)
-    reg [0:0] store;    // dor -> DB
+    reg [0:0] pre_load;    // assert RDB (read operation, in T1)
+    reg [0:0] store;    // dor -> DB (write operation, in T2)
     e_aluop aluop;    // ALU operation
     e_cis cis;    // ALU carry in select
     reg [0:0] bi0;    // Zero BI

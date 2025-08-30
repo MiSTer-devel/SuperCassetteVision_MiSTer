@@ -18,7 +18,7 @@ module cputest_tb();
 reg         clk, res;
 reg         cp1p, cp1n, cp2p, cp2n;
 reg [7:0]   dut_db_i;
-reg         mem_ready;
+reg         mem_rdb, mem_ready;
 reg         vbl;
 
 wire [15:0] a;
@@ -113,9 +113,10 @@ assign cart_ncs = ~vram_ncs;
 
 `ifdef TEST_WAIT
 // HACK: This works because WAITB also affects internal RAM/ROM accesses.
-wire mem_cs = ~(dut.core_rdb & dut.core_wrb);
+wire mem_cs = ~(mem_rdb & dut.core_wrb);
 always @(posedge clk) if (cp1p) begin
   mem_ready <= mem_cs;
+  mem_rdb <= dut.core_rdb; // RDB asserts in T1
 end
 `endif
 assign waitb = mem_ready;

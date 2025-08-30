@@ -96,7 +96,7 @@ reg [14:0]   tc;           // lower 3 bits are prescaler
 reg [15:0]   aor;
 reg [7:0]    dor;
 reg          rd_ext, wr_ext;
-reg [7:0]    rfo, spro, idb;
+reg [7:0]    rfo, spro, idl, idl_d, idb;
 reg [15:0]   ab;
 reg [7:0]    ai, bi, ibi, co;
 reg [7:0]    alu_co;
@@ -139,7 +139,7 @@ reg          cl_idb_ir, cl_of_prefix_ir;
 reg          cl_ui_ie;
 reg          cl_abl_aor, cl_abh_aor, cl_ab_aor;
 reg          cl_idb_dor, cl_store_dor;
-reg          cl_load_db;
+reg          cl_pre_load_db, cl_load_db;
 e_urfs       cl_rfos, cl_rfts;
 e_spr        cl_spr;
 e_idbs       cl_idbs;
@@ -314,16 +314,27 @@ always_ff @(posedge CLK) begin
     wr_ext <= 0;
   end
   else begin
-    // RDB/WRB asserts in T2 @ CP1 rising, de-asserts in T3 @ CP2 falling
+    // RDB asserts in T1 @ CP2 rising, de-asserts in T3 @ CP2 rising
+    // WRB asserts in T2 @ CP1 rising, de-asserts in T3 @ CP2 rising
     if (cp1p) begin
-      rd_ext <= rd_ext | cl_load_db;
       wr_ext <= wr_ext | cl_store_dor;
     end
-    else if (cp2n) begin
-      rd_ext <= rd_ext & cl_load_db;
+    else if (cp2p) begin
+      rd_ext <= cl_pre_load_db | cl_load_db;
       wr_ext <= wr_ext & cl_store_dor;
     end
   end
+end
+
+// Latch DB_I into idl on CP2 rising, before RDB de-asserts.
+always_comb begin
+  idl = idl_d;
+  if (~cp2)
+    idl = DB_I;
+end
+
+always_ff @(posedge CLK) if (cp2p) begin
+  idl_d <= idl;
 end
 
 assign DB_O = dor;
@@ -471,7 +482,7 @@ always @(posedge CLK) begin
       else begin
         // HACK: Bypassing idb, because I need it free in T3 for completing
         // the prior instruction.
-        ir[7:0] <= DB_I;
+        ir[7:0] <= idl;
       end
     end
     if (cl_of_prefix_ir) begin
@@ -575,7 +586,7 @@ always @* begin
   case (cl_idbs)
     UIDBS_0: idb = 0;
     UIDBS_RF: idb = rfo;
-    UIDBS_DB: idb = DB_I;
+    UIDBS_DB: idb = idl;
     UIDBS_CO: idb = co;
     UIDBS_SPR: idb = spro;
     UIDBS_SDG: idb = sdg;
@@ -957,6 +968,16 @@ always @(posedge CLK) begin
   end
 end
 
+// cl_load_db (in T2) will always follow cl_pre_load_db (in T1).
+always @(posedge CLK) begin
+  if (resg) begin
+    cl_load_db <= 0;
+  end
+  else if (cp2n & ~t2_wait) begin
+    cl_load_db <= cl_pre_load_db;
+  end
+end
+
 always @* cl_idb_psw = (cl_rfts == URFS_PSW);
 always @* cl_co_z = nc.pswz;
 always @* cl_cco_c = nc.pswcy;
@@ -975,7 +996,7 @@ initial cl_abh_aor = 0;
 always @* cl_ab_aor = oft[0] | nc.aout;
 always @* cl_idb_dor = (nc.lts == ULTS_DOR);
 always @* cl_store_dor = nc.store & ~cl_skip;
-always @* cl_load_db = oft[1] | (nc.load & ~cl_skip);
+always @* cl_pre_load_db = oft[0] | (nc.pre_load & ~cl_skip);
 always @* cl_rfos = resolve_rfs_ir(nc.rfos);
 always @* cl_rfts = resolve_rfs_ir(nc.rfts);
 always @* cl_spr = resolve_sprs(nc.sprs);

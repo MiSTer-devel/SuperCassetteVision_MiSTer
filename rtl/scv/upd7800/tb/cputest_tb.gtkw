@@ -215,6 +215,7 @@ cputest_tb.dut.core.cl_one_c
 cputest_tb.dut.core.cl_ors
 cputest_tb.dut.core.cl_pc_dec
 cputest_tb.dut.core.cl_pc_inc
+cputest_tb.dut.core.cl_pre_load_db
 @22
 cputest_tb.dut.core.cl_pswsk[3:0]
 cputest_tb.dut.core.cl_rfos[3:0]

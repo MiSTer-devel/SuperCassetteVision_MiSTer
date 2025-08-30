@@ -281,12 +281,12 @@ nrom:
     - name: aout
       width: 1
       desc: ab -> AOR
-    - name: load
+    - name: pre_load
       width: 1
-      desc: assert RDB (read operation)
+      desc: assert RDB (read operation, in T1)
     - name: store
       width: 1
-      desc: dor -> DB
+      desc: dor -> DB (write operation, in T2)
     - name: aluop
       type: e_aluop
       desc: ALU operation
