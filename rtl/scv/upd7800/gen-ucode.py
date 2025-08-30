@@ -357,9 +357,14 @@ def table(ir, nsteps):
     ird_row(ir, nsteps, 0, ucs)
 
 # BLOCK: (DE)+ <- (HL)+, C <- C - 1, repeat until borrow
-# TODO: M2 repeats M1 address, but no R/W; M3 is R; M4 is W.
 def block(ir, nsteps):
     ucs = ucode_seq('BLOCK')
+    # C -> idb -> AI, AI - 1 -> CO
+    ucs.step({'rfos': 'C', 'idbs': 'RF', 'lts': 'AI', 'aluop': 'DEC'})
+    # CO -> idb -> C
+    ucs.step({'rfts': 'C', 'idbs': 'CO', 'lts': 'RF'})
+    # Decrement PC if no borrow
+    ucs.step({'abs': 'PC', 'ab_dec_if_nb': 1})
     # HL -> ab -> aor
     ucs.step(aor_wr('HL') | {'pre_load': 1})
     # HL + 1 -> HL
@@ -371,12 +376,6 @@ def block(ir, nsteps):
     # dor -> DB, DE + 1 -> DE
     ucs.step(nc_store | {'abs': 'DE', 'ab_inc': 1, 'abits': 'DE'})
     ucs.step(nc_idle)
-    # C -> idb -> AI, AI - 1 -> CO
-    ucs.step({'rfos': 'C', 'idbs': 'RF', 'lts': 'AI', 'aluop': 'DEC'})
-    # CO -> idb -> C
-    ucs.step({'rfts': 'C', 'idbs': 'CO', 'lts': 'RF'})
-    # Decrement PC if no borrow
-    ucs.step({'abs': 'PC', 'ab_dec_if_nb': 1})
     ird_row(ir, nsteps, 0, ucs, no_skip=True)
 
 # EX: Exchange V, A and V', A'

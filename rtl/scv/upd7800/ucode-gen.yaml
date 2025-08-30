@@ -1175,15 +1175,15 @@ urom:
   - uaddr: BLOCK
     naddr: 30
   - naddr: 31
-  - naddr: 6
   - naddr: 32
   - naddr: 33
-  - naddr: 0
   - naddr: 34
+  - naddr: 6
   - naddr: 35
+  - naddr: 36
   - m1: 1
     bm: END
-    naddr: 36
+    naddr: 0
   - uaddr: EX
     bm: END
     naddr: 37
@@ -1454,7 +1454,7 @@ urom:
     bm: END
     naddr: 0
   - uaddr: INC_HL
-    naddr: 31
+    naddr: 34
   - naddr: 0
   - m1: 1
     bm: END
@@ -1814,7 +1814,7 @@ urom:
     bm: END
     naddr: 138
   - uaddr: RLD
-    naddr: 30
+    naddr: 33
   - naddr: 0
   - naddr: 6
   - naddr: 139
@@ -1827,7 +1827,7 @@ urom:
   - bm: END
     naddr: 144
   - uaddr: RRD
-    naddr: 30
+    naddr: 33
   - naddr: 0
   - naddr: 6
   - naddr: 145
@@ -2799,36 +2799,36 @@ nrom:
     pre_load: 1
     ab_inc: 1
   - naddr: 30
+    rfos: C
+    idbs: RF
+    lts: AI
+    aluop: DEC
+  - naddr: 31
+    rfts: C
+    idbs: CO
+    lts: RF
+  - naddr: 32
+    abs: PC
+    ab_dec_if_nb: 1
+  - naddr: 33
     abs: HL
     aout: 1
     pre_load: 1
-  - naddr: 31
+  - naddr: 34
     abs: HL
     ab_inc: 1
     abits: HL
-  - naddr: 32
+  - naddr: 35
     rfos: W
     idbs: RF
     lts: DOR
     abs: DE
     aout: 1
-  - naddr: 33
+  - naddr: 36
     store: 1
     abs: DE
     ab_inc: 1
     abits: DE
-  - naddr: 34
-    rfos: C
-    idbs: RF
-    lts: AI
-    aluop: DEC
-  - naddr: 35
-    rfts: C
-    idbs: CO
-    lts: RF
-  - naddr: 36
-    abs: PC
-    ab_dec_if_nb: 1
   - naddr: 37
     lts: SEC
     rfts: V
