@@ -297,8 +297,8 @@ reg [2:0] vcnt;
 reg [6:0] acnt, acntn;
 wire      cpu4_ce;
 
-localparam [8:0] CPU4_MUL = 9'd88;
-localparam [8:0] CPU4_DIV = 9'd315;
+localparam [8:0] CPU4_MUL = 9'd87;
+localparam [8:0] CPU4_DIV = 9'd307;
 localparam [6:0] AUD_MUL = 7'd22;
 localparam [6:0] AUD_DIV = 7'd105;
 
