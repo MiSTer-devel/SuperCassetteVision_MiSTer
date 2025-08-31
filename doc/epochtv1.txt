@@ -430,11 +430,12 @@ only partially rendered, dropping 1-3 nibbles (4-12px) from the right.
 
 CPU accesses to VRAM do not affect evalation or rendering timing.  The
 CPU access takes over the VRAM bus for an integer number of VRAM bus
-cycles, for as long as (CPU bus) A15 is low, less address decoding.
-The CPU access replaces the intended sprite render access.  The sprite
-pattern data seen by rendering is replaced by 0 (transparent).  Dragon
-Ball shows this effect near the top of the screen, most notably on the
-edges of the scrolling land.
+cycles, for roughly as long as \RDB or \WRB is low.  VRAM writes take
+2-3 bus cycles (\VWE asserts for one cycle less), and reads take 4-5
+cycles.  The CPU access replaces the intended sprite render access.
+The sprite pattern data seen by rendering is replaced by 0
+(transparent).  Dragon Ball shows this effect near the top of the
+screen, most notably on the edges of the scrolling land.
 
 
 Interesting Phenomena

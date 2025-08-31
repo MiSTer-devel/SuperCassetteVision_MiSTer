@@ -399,20 +399,13 @@ assign oam2_we1 = boc_we;
 reg [7:0] cpu_do;
 reg [2:0] cpu_wait_cnt, cpu_wait_cnt_next;
 reg       cpu_waitb, cpu_waitb_next;
-reg       cpu_csb_d;
 reg       cpu_rdb_d;
-reg       cpu_sel;
 wire      cpu_sel_oam0;
 wire      cpu_rdb_posedge;
 
 initial begin
   cpu_wait_cnt = 0;
   cpu_waitb = 0;
-end
-
-always_ff @(posedge CLK) if (vram_ce) begin
-  cpu_csb_d <= CSB;
-  cpu_sel <= (cpu_sel | ~cpu_csb_d) & ~CSB;
 end
 
 always_ff @(posedge CLK) if (CP1_POSEDGE) begin
@@ -447,6 +440,8 @@ always_ff @(posedge CLK) if (CE) begin
   end
 end
 
+// WAITB extends BGM reads by 3 cycles, all other reads by 2 cycles,
+// and writes by 1 cycle.
 always_comb begin
   cpu_wait_cnt_next = cpu_wait_cnt;
   if (|cpu_wait_cnt) begin
@@ -454,21 +449,15 @@ always_comb begin
   end
   else begin
     if (~cpu_waitb) begin
-      if (~CSB) begin
-        // WAITB extends BGM reads by 3 cycles, all other reads by 2
-        // cycles, and writes by 1 cycle.
-        if (~RDB)
-          cpu_wait_cnt_next = cpu_sel_bgm ? 3 : 2;
-        else if (~WRB)
-          cpu_wait_cnt_next = 1;
-      end
-    end
-    else /* if (cpu_waitb) */ begin
+      if (cpu_rd)
+        cpu_wait_cnt_next = cpu_sel_bgm ? 3 : 2;
       // If RDB de-asserts in cycle n-2 and remains high in cycle n-1,
       // then WAITB will assert in cycle n (if A15 is low).  This
       // usually coincides with T1 of a write cycle following a read.
       if (cpu_rdb_posedge)
         cpu_wait_cnt_next = 1;
+    end
+    else /* if (cpu_waitb) */ begin
     end
   end
 end
@@ -477,10 +466,11 @@ wire cpu_wait_cnt_resetting = |cpu_wait_cnt & ~|cpu_wait_cnt_next;
 
 always_comb begin
   cpu_waitb_next = cpu_waitb;
-  if (cpu_wait_cnt_resetting) begin
+  if (cpu_wait_cnt_resetting)
     cpu_waitb_next = ~cpu_waitb;
-  end
-  else if (cpu_waitb & RDB & WRB)
+  else if (~cpu_waitb & (cpu_wr | cpu_rdb_posedge))
+    cpu_waitb_next = '1;
+  else if (cpu_waitb & ~(cpu_rd | cpu_wr))
     cpu_waitb_next = '0;
 end
 
@@ -508,29 +498,27 @@ assign oam_a_sel_cpu = cpu_sel_oam & cpu_rdwr;
 wire [11:0] va;
 reg [11:0]  vram_cpu_addr;
 reg [7:0]   vram_cpu_data;
-reg         vram_cpu_sel_vram_d;
+reg         vram_cpu_sel;
 reg         vram_wr;
 
 // VRAM bus cycle rate is 1/2 pixel clock, phase is odd columns (output)
 assign vram_ce = CE & col[0];
 
 always @(posedge CLK) if (vram_ce) begin
-  vram_cpu_sel_vram_d <= cpu_sel_vram;
+  vram_cpu_sel <= cpu_sel_vram & (cpu_rd | cpu_wr);
   vram_cpu_addr <= A[11:0];
   vram_cpu_data <= DB_I;
   vram_wr <= cpu_wr;
 end
 
-wire vram_sel_cpu = cpu_sel & vram_cpu_sel_vram_d;
-
-assign va = vram_sel_cpu ? vram_cpu_addr : spr_vram_addr;
+assign va = vram_cpu_sel ? vram_cpu_addr : spr_vram_addr;
 
 always @*
-  spr_vram_data = vram_sel_cpu ? '0 : VD_I;
+  spr_vram_data = vram_cpu_sel ? '0 : VD_I;
 
 assign VA = va[10:0];
 assign VD_O = vram_wr ? vram_cpu_data : 8'hzz;
-assign nVWE = ~(vram_sel_cpu & vram_wr);
+assign nVWE = ~(vram_cpu_sel & vram_wr);
 assign nVCS[0] = va[11];
 assign nVCS[1] = ~va[11];
 

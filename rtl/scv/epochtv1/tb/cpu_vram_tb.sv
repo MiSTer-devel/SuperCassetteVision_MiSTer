@@ -43,7 +43,7 @@ end
 
 // Zero control VRAM reads when CPU accesses DUT VRAM.
 always @(posedge clk) begin
-  if (dut.vdc.vram_sel_cpu)
+  if (dut.vdc.vram_cpu_sel)
     force ctl.vdc.VD_I = 0;
   else
     release ctl.vdc.VD_I;
