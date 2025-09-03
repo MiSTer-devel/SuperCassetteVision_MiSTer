@@ -165,12 +165,15 @@ always @(negedge vs) begin
   $sformat(fname, "frames/render-%03d", frame);
   pice = 0;
 `ifdef VERILATOR
-  if (frame == 290)
+  if (frame == 14)
     $dumpvars();
-  if (frame == 320)
+  if (frame == 17)
+    $finish();
+`else
+  if (frame == 5)
     $finish();
 `endif
-  if ((frame % 10) == 0) begin
+  if ((frame % 1) == 0) begin
     fpic = $fopen({fname, ".hex"}, "w");
   end
   frame = frame + 1;
@@ -220,7 +223,7 @@ initial #0 begin
 
 end
 
-initial if (1) begin
+initial if (0) begin
   #(300e3);
   $display("Pressing 1...");
   hmi.num[1] = '1;

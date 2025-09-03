@@ -406,16 +406,15 @@ Each step takes a fixed number of VRAM bus cycles:
   Evaluate: 1 cycle
   Render: 1 + (width in pixels / 4) cycles
 
-If sprite idx 0 is visible, then the VRAM address bus will output its
-first pattern address in column 1, and the next address (A0 toggles)
-in column 5.  This implies that sprite evaluation of sprite idx 0
-begins in column 259.
+If sprite idx 0 is visible, then the VRAM address bus will first
+change in column 1, output its first pattern address in column 3, and
+the next address (A0 toggles) in column 5.  This implies that sprite
+evaluation of sprite idx 0 begins in column 259.
 
 Sprite width includes modifications by attribute flags that double
-(link) and halve the sprite.  For example, a half-width sprite only
-takes 3 render cycles.
-
-[TODO: Cycles for 2-color sprites?]
+(link) and halve the sprite.  For example:
+- a half-width sprite only takes 3 render cycles
+- a 2-color sprite takes 9 render cycles
 
 The start line is always updated for a sprite that passes the
 evaluation test.  Because the start line is also used to calculate the
@@ -463,3 +462,15 @@ Place a sprite at Y pos < 0x78 (0x70 if double-height), start line >
 0.  Now set R0 bit 3.  In the frame after R0 is latched (frame 1),
 nothing changes.  In all frames afterwards (frames 2 on), all lines of
 that sprite will appear, as if start line was 0.
+
+During sprite rendering, some VRAM address bits (VAB) change one VRAM
+bus cycle earlier than the other bits.  And some change in both cycles.
+- First render cycle: VAB[3:2], sometimes VAB[4,5]
+- Second render cycle: \VCS, VAB[1], VAB[10:4], sometimes VAB[4,5]
+- VAB[0] is always low in all cycles, except when rendering pattern
+  bytes at odd addresses.
+- VAB[1] normally resets low after rendering ends.  But if that sprite
+  had the split and link X attributes set, it will remain high.
+- Rendering a half-width/half-height sprite followed by a
+  double-height sprite can cause VAB[4] to pulse in the first render
+  cycle.
