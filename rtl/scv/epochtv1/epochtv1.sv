@@ -707,7 +707,8 @@ assign spr_skip_dl = spr_half_w & spr_oa_draw.link_x;
 assign spr_skip_dt = spr_half_h & spr_oa_draw.link_y;
 
 always_ff @(posedge CLK) if (sofp_ce) begin
-  if (spr_vram_re)
+  // spr_nc used in if() to ensure it doesn't stay high after sofp_row_end.
+  if (spr_vram_re | spr_nc)
     spr_nc <= ~spr_nc;
 end
 
@@ -927,7 +928,6 @@ assign sofp_oam_idx_max = sp_hide7 ? 7'd63 : 7'd127;
 
 assign sofp_row = (row_p >= 9'd2) & (row_p <= 9'd253);
 assign sofp_row_start = sofp_row & (col_p == 0) & ~row_p[0];
-// TODO: Is this early? See vid-2clr-spr1-vram.bin row 77
 assign sofp_row_end = sofp_row & (col_p >= 9'd241) & row_p[0];
 
 initial begin
