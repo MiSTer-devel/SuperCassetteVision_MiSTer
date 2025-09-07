@@ -8,6 +8,8 @@
 
 `timescale 1us / 1ps
 
+import scv_pkg::*;
+
 module render_tb();
 
 reg         clk, res;
@@ -33,12 +35,16 @@ initial begin
   $dumpvars();
 end
 
+palette_t cfg_palette = PALETTE_RGB;
+overscan_mask_t cfg_overscan_mask = OVERSCAN_MASK_NONE;
+
 epochtv1 dut
   (
    .CLK(clk),
    .CE(ce),
 
-   .CFG_PALETTE('0),
+   .CFG_PALETTE(cfg_palette),
+   .CFG_OVERSCAN_MASK(cfg_overscan_mask),
 
    .A(a),
    .DB_I(din),
@@ -217,7 +223,7 @@ initial #0 begin
   dut.row = dut.FIRST_ROW_VSYNC - 1;
 
   load_chr("epochtv.chr");
-  load_rams("vid-spr0-vram.bin");
+  load_rams("balloons-vram.bin");
 
   -> init_regs;
 

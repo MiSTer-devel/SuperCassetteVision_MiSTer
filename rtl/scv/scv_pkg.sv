@@ -42,4 +42,12 @@ typedef enum bit [0:0]
  PALETTE_RF
 } palette_t;
 
+// VDC overscan mask size
+typedef enum bit [1:0]
+{
+ OVERSCAN_MASK_LARGE = 2'd0,
+ OVERSCAN_MASK_SMALL,
+ OVERSCAN_MASK_NONE
+} overscan_mask_t;
+
 endpackage

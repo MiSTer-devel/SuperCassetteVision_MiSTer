@@ -4,6 +4,8 @@
 
 `timescale 1us / 1ps
 
+import scv_pkg::*;
+
 module vdc_vram
   (
    input         clk,
@@ -29,12 +31,16 @@ wire [7:0]  vd_i, vd_o, vrama_do, vramb_do;
 wire        nvwe;
 wire [1:0]  nvcs;
 
+palette_t cfg_palette = PALETTE_RGB;
+overscan_mask_t cfg_overscan_mask = OVERSCAN_MASK_NONE;
+
 epochtv1 vdc
   (
    .CLK(clk),
    .CE(ce),
 
-   .CFG_PALETTE('0),
+   .CFG_PALETTE(cfg_palette),
+   .CFG_OVERSCAN_MASK(cfg_overscan_mask),
 
    .CP1_POSEDGE(cp1p),
    .A(a),

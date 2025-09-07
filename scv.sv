@@ -204,7 +204,7 @@ assign BUTTONS = 0;
 // 0         1         2         3          4         5         6
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// X       X       XXXX
+// X       XXX     XXXX
 
 wire [1:0] ar = status[122:121];
 
@@ -220,6 +220,7 @@ localparam CONF_STR = {
 	"O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	//"O[2],TV Mode,NTSC,PAL;",
 	"O[8],Palette,RGB,RF;",
+    "O[10:9],Overscan mask,Large,Small,None;",
 	"-;",
     "O[19:16],Cartridge mapper,automatic,rom8k,rom16k,rom32k,rom32k_ram,rom64k,rom128k,rom128_ram;",
 	"-;",
@@ -344,10 +345,12 @@ pll pll
 
 mapper_t mapper;
 palette_t vdc_palette;
+overscan_mask_t vdc_overscan_mask;
 
 wire reset = RESET | status[0] | buttons[1] | rominit_active;
 assign mapper = mapper_t'(status[19:16]);
 assign vdc_palette = palette_t'(status[8]);
+assign vdc_overscan_mask = overscan_mask_t'(status[10:9]);
 
 scv scv
   (
@@ -364,6 +367,7 @@ scv scv
 
    .MAPPER(mapper),
    .VDC_PALETTE(vdc_palette),
+   .VDC_OVERSCAN_MASK(vdc_overscan_mask),
 
    .HMI(hmi),
 

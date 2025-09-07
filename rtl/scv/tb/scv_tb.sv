@@ -32,6 +32,9 @@ mapper_t    mapper;
 
 hmi_t       hmi;
 
+palette_t vdc_palette = PALETTE_RGB;
+overscan_mask_t vdc_overscan_mask = OVERSCAN_MASK_NONE;
+
 initial begin
   $timeformat(-6, 0, " us", 1);
 
@@ -57,7 +60,8 @@ scv dut
    .ROMINIT_VALID(rominit_valid),
 
    .MAPPER(mapper),
-   .VDC_PALETTE('0),
+   .VDC_PALETTE(vdc_palette),
+   .VDC_OVERSCAN_MASK(vdc_overscan_mask),
 
    .HMI(hmi),
 

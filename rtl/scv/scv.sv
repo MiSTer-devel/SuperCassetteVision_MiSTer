@@ -28,6 +28,7 @@ module scv
 
    input         mapper_t MAPPER,
    input         palette_t VDC_PALETTE,
+   input         overscan_mask_t VDC_OVERSCAN_MASK,
 
    input         hmi_t HMI,
 
@@ -125,6 +126,7 @@ epochtv1 vdc
    .CE(vdc_ce),
 
    .CFG_PALETTE(VDC_PALETTE),
+   .CFG_OVERSCAN_MASK(VDC_OVERSCAN_MASK),
 
    .ROMINIT_SEL_CHR(ROMINIT_SEL_CHR),
    .ROMINIT_ADDR(ROMINIT_ADDR[9:0]),

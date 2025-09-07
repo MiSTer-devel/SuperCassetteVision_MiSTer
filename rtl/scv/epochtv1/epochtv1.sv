@@ -28,6 +28,7 @@ module epochtv1
 
    // Emulator configuration
    input         palette_t CFG_PALETTE,
+   input         overscan_mask_t CFG_OVERSCAN_MASK,
 
    // CPU address / data bus
    input         CP1_POSEDGE, // for CPU bus timing
@@ -74,29 +75,10 @@ localparam [8:0] LAST_COL_HSYNC = 9'd259;
 localparam [8:0] FIRST_ROW_BOC = 9'd258;
 localparam [8:0] LAST_ROW_BOC = 9'd261;
 
-`ifdef EPOCHTV1_HIDE_OVERSCAN
-// Visible window: 204 x 230 = (1,2)-(204,231)
-//
-// Hide render window edges, which would normally be hidden by
-// overscan.
-localparam [8:0] FIRST_ROW_VISIBLE = FIRST_ROW_RENDER + 'd2;
-localparam [8:0] LAST_ROW_VISIBLE = LAST_ROW_RENDER;
-localparam [8:0] FIRST_COL_VISIBLE = FIRST_COL_RENDER + 'd1;
-localparam [8:0] LAST_COL_VISIBLE = LAST_COL_RENDER - 'd3;
-`else
-// Visible window: same as render window
-localparam [8:0] FIRST_ROW_VISIBLE = FIRST_ROW_RENDER;
-localparam [8:0] LAST_ROW_VISIBLE = LAST_ROW_RENDER;
-localparam [8:0] FIRST_COL_VISIBLE = FIRST_COL_RENDER;
-localparam [8:0] LAST_COL_VISIBLE = LAST_COL_RENDER;
-`endif
-
 `ifdef EPOCHTV1_BORDERS
 // left/right borders
-localparam [8:0] FIRST_COL_LEFT = FIRST_COL_VISIBLE - 1'd8;
-localparam [8:0] LAST_COL_LEFT = FIRST_COL_VISIBLE - 1'd1;
-localparam [8:0] FIRST_COL_RIGHT = LAST_COL_VISIBLE + 1'd1;
-localparam [8:0] LAST_COL_RIGHT = LAST_COL_VISIBLE + 1'd8;
+localparam [8:0] BORDER_HORZ = 'd8;
+localparam [8:0] BORDER_VERT = 'd1;
 `endif
 
 
@@ -1036,10 +1018,53 @@ assign sofp_px = olb_rd[(sofp_rrs*4)+:4];
 
 
 //////////////////////////////////////////////////////////////////////
+// Window calculation
+//
+// Define the visible window for the selected overscan mask.  The goal
+// is to blacken the render window edges which would normally be
+// hidden by overscan.
+
+reg [8:0] first_row_visible, last_row_visible, first_col_visible,
+          last_col_visible;
+
+always_comb begin
+  // OVERSCAN_MASK_NONE: Visible window: same as render window
+  first_row_visible = FIRST_ROW_RENDER;
+  last_row_visible = LAST_ROW_RENDER;
+  first_col_visible = FIRST_COL_RENDER;
+  last_col_visible = LAST_COL_RENDER;
+
+  if (CFG_OVERSCAN_MASK == OVERSCAN_MASK_SMALL) begin
+    // Visible window: 204 x 230 = (1,2)-(204,231)
+    first_row_visible += 'd2;
+    first_col_visible += 'd1;
+    last_col_visible -= 'd3;
+  end
+  else if (CFG_OVERSCAN_MASK == OVERSCAN_MASK_LARGE) begin
+    // Visible window: 197 x 222 = (5,5)-(201,226)
+    first_row_visible += 'd5;
+    last_row_visible -= 'd7;
+    first_col_visible += 'd5;
+    last_col_visible -= 'd6;
+  end
+end
+
+
+//////////////////////////////////////////////////////////////////////
 // Sync generator
 
 reg  de, hsync, vsync, vbl;
 reg  de_p;
+
+`ifdef EPOCHTV1_BORDERS
+wire [8:0] first_col_left, last_col_left, first_col_right, last_col_right;
+
+// Extend DE horizontally on both sides.
+assign first_col_left = first_col_visible - 'd8;
+assign last_col_left = first_col_visible - 'd1;
+assign first_col_right = last_col_visible + 'd1;
+assign last_col_right = last_col_visible + 'd8;
+`endif
 
 always_comb begin
   // Enable DE for render region...
@@ -1047,10 +1072,10 @@ always_comb begin
 `ifdef EPOCHTV1_BORDERS
   // plus right border...
   if (render_row)
-    de_p = de_p | ((col >= FIRST_COL_RIGHT) & (col <= LAST_COL_RIGHT));
+    de_p = de_p | ((col >= first_col_right) & (col <= last_col_right));
   // plus left border.
   if (render_row)
-    de_p = de_p | ((col >= FIRST_COL_LEFT) & (col <= LAST_COL_LEFT));
+    de_p = de_p | ((col >= first_col_left) & (col <= last_col_left));
 `endif
 end
 
@@ -1090,8 +1115,8 @@ assign render_row = (row >= FIRST_ROW_RENDER) & (row <= LAST_ROW_RENDER);
 assign render_col = (col >= FIRST_COL_RENDER) & (col <= LAST_COL_RENDER);
 assign render_px = render_row & render_col;
 
-assign visible_row = (row >= FIRST_ROW_VISIBLE) & (row <= LAST_ROW_VISIBLE);
-assign visible_col = (col >= FIRST_COL_VISIBLE) & (col <= LAST_COL_VISIBLE);
+assign visible_row = (row >= first_row_visible) & (row <= last_row_visible);
+assign visible_col = (col >= first_col_visible) & (col <= last_col_visible);
 assign visible_px = visible_row & visible_col;
 
 

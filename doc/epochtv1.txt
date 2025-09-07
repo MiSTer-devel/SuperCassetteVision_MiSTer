@@ -24,7 +24,7 @@ Overview
       . HIGH (XOR w/ HSYNC) at VSYNC
   . Timing
     . Full frame (incl. blanking): 260 cols x 263 rows
-    . Render area (incl. overscan): 208 cols x 232 rows
+    . Render area (incl. underscan): 208 cols x 232 rows
     . Pixel rate: 4.090909 MHz (XTAL / 3.5)
     . Line rate (horizontal refresh): 15734 kHz
     . Frame rate (vertical refresh): 59.826 Hz
@@ -154,7 +154,7 @@ CPU access is unchanged.
 Screen size
 -----------
 
-The active render area, including overscan, is 208 cols x 232 rows.
+The active render area, including underscan, is 208 cols x 232 rows.
 Borders outside this area contain black pixels.
 
 The character screen edges are used by some games for internal state.
