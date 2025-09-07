@@ -1,13 +1,25 @@
 # [Epoch Super Cassette Vision](https://en.wikipedia.org/wiki/Super_Cassette_Vision) core for [MISTer Platform](https://github.com/MiSTer-devel/Main_MiSTer/wiki)
 
-This is a first-order approximation emulator of the Epoch Super Cassette Vision.
+This is an emulator of the Epoch Super Cassette Vision.
+
+## Development status
+
+### Phase 1
 
 The best documentation I could find is embodied in the [MAME](https://www.mamedev.org) SCV emulator. Takeda-san's [eSCV](http://takeda-toshiya.my.coocan.jp/scv/index.html) and related documents were also very helpful. NEC data sheets of the uCOM-87 microcontroller series were found around the 'net and provided instruction opcodes, cycle timings and other details. The gaps (and there are many) were filled with educated guesses and prior art from building emulators for MOS6502-based machines and the SNES.
 
-It is hoped that, in the future, hardware will be acquired, examined (nicely), and its behavior documented.
+The audio processor (NEC uPD1771C-017) was reverse-engineered from a die shot, a transistor-level [JavaScript simulator](http://reverendgumby.gitlab.io/visuald1771c) of the same, and the [original LSI design docs](https://oura.oguchi-rd.com). The processor is actually a specialized 8-bit CPU with internal RAM and ROM. The -017 mask ROM is required.
+
+### Phase 2 (current)
+
+A Japanese console has been acquired. It is currently being examined (nicely) and its detailed behavior documented. The goal is to learn how the video chip (Epoch TV-1) performs rendering.
+
 
 ## Features
-- Just enough to boot the internal ROM, run its built-in video test, and render it.
+- Cycle-accurate CPU (NEC uPD7801G)
+- Logic-accurate audio processor (NEC uPD1771C)
+- Video processor (Epoch TV-1 (NTSC))
+- Cartridge mapper support for all known released cartridges
 
 ## Installation
 - Copy the latest *.rbf from releases/ to the root of the SD card
@@ -42,7 +54,7 @@ Up to two digital joysticks are mapped to the two controllers. Each controller h
 
 The most common **SELECT** buttons -- 1 to 4 and **EN** -- can also be configured as joystick buttons.
 
-Most games refer to a **START** button. There is no such button: Use a **Trig** button or **EN** instead.
+Most games refer to a **START** button. This means to press both **Trig** buttons.
 
 ### Cartridge ROMs
 
@@ -63,12 +75,9 @@ Two cartridges had a mix of ROM sizes. No special mappers exist for them (yet). 
 
 
 ## Known issues
-
+- Boulder Dash: some playfield objects flicker. Does not happen on actual hardware.
 
 ## TODOs
-- CPU (uPD7801G)
-  - Fix timing of special register instructions (e.g., 'ANI sr2, byte' is 11 steps, should be 17)
-- Audio (uPD1771C)
 - Cartridges
   - Save and restore battery-backed RAM
   - Make mappers for special cases
